@@ -41,9 +41,11 @@ async function dol(env, table, filterObject, { limit = 200, offset = 0 } = {}) {
   url.searchParams.set('limit', String(limit));
   url.searchParams.set('offset', String(offset));
   if (filterObject) url.searchParams.set('filter_object', JSON.stringify(filterObject));
+  // DOL's /v4/get endpoints take the key as a query parameter, not a header.
+  url.searchParams.set('X-API-KEY', env.DOL_API_KEY);
 
   const res = await fetch(url, {
-    headers: { 'X-API-KEY': env.DOL_API_KEY, 'User-Agent': 'violations-desk/1.0' },
+    headers: { 'User-Agent': 'violations-desk/1.0' },
     cf: { cacheTtl: 900, cacheEverything: true }   // DOL data changes daily at most
   });
   if (!res.ok) {
@@ -58,6 +60,13 @@ async function dol(env, table, filterObject, { limit = 200, offset = 0 } = {}) {
 }
 
 const eq = (field, value) => ({ and: [{ field, operator: 'eq', value }] });
+
+// "1984-08-09T00:00:00" -> "08/09/1984"; anything unparseable passes through.
+function usDate(v) {
+  if (!v) return '';
+  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : String(v);
+}
 
 async function searchInspections(env, { name, state, since, limit = 25 }) {
   const conds = [];
@@ -109,7 +118,7 @@ export function mapRecord({ insp, violations, events, injuries, accident }) {
 
   return {
     activityNr: String(insp.activity_nr),
-    dateOpened: insp.open_date,
+    dateOpened: usDate(insp.open_date),
     caseStatus: insp.close_case_date ? 'CLOSED' : 'OPEN',
     state: insp.site_state,
     establishment: insp.estab_name,
@@ -136,12 +145,12 @@ export function mapRecord({ insp, violations, events, injuries, accident }) {
       initialCitationType: VIOL_TYPE[v.initial_viol_type] || v.initial_viol_type || '',
       citationType: VIOL_TYPE[v.viol_type] || v.viol_type || '',
       standardCited: v.standard,
-      issuanceDate: v.issuance_date,
-      abatementDueDate: v.abate_date,
+      issuanceDate: usDate(v.issuance_date),
+      abatementDueDate: usDate(v.abate_date),
       currentPenalty: v.current_penalty,
       initialPenalty: v.initial_penalty,
       ftaPenalty: v.fta_penalty,
-      contest: v.contest_date,
+      contest: usDate(v.contest_date),
       latestEvent: latestEventFor(v.citation_id, events || []),
       note: '',
       standardDetails: ''   // fill from your standards data source
@@ -149,7 +158,7 @@ export function mapRecord({ insp, violations, events, injuries, accident }) {
 
     investigation: (accident || (injuries || []).length) ? {
       investigationNr: accident?.summary_nr ?? injuries[0]?.summary_nr ?? '',
-      event: accident?.event_date ?? '',
+      event: usDate(accident?.event_date),
       narrative: accident?.abstract_text ?? '',
       keywords: accident?.event_keyword ?? '',
       injured: (injuries || []).map(i => ({
@@ -210,7 +219,7 @@ export default {
         });
         return json(rows.map(r => ({
           activityNr: String(r.activity_nr),
-          openDate: r.open_date,
+          openDate: usDate(r.open_date),
           state: r.site_state,
           establishment: r.estab_name
         })), request, env);
