@@ -58,6 +58,13 @@
 
   /* ---- top action bar ---- */
   .search-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  .estab-search { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border: 1px solid var(--line); background: var(--bg-sunken); border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; }
+  .estab-search label { font-size: 12px; font-weight: 700; color: var(--ink); }
+  .estab-search input { font-family: var(--sans); font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg); color: var(--ink); }
+  .estab-search input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+  #estabName { flex: 1 1 260px; min-width: 180px; }
+  #estabState { width: 54px; text-transform: uppercase; }
+  #estabYears { width: 64px; }
   .load-status { font-size: 12px; color: var(--ink-soft); }
   .load-status.error { color: var(--danger); font-weight: 600; }
   .osha-link { margin: 0 auto; color: var(--link); font-size: 12.5px; font-weight: 600; text-decoration: none; }
@@ -323,6 +330,16 @@
         </dl>
       </div>
     </div>
+  </div>
+
+  <div class="estab-search">
+    <label for="estabName">Establishment name</label>
+    <input id="estabName" type="text" placeholder="e.g. ACME MANUFACTURING" autocomplete="off" spellcheck="false">
+    <label for="estabState">State</label>
+    <input id="estabState" type="text" maxlength="2" placeholder="CA" autocomplete="off">
+    <label for="estabYears">Years back</label>
+    <input id="estabYears" type="number" min="1" max="30" value="5">
+    <button class="btn btn-primary" id="estabSearchBtn" type="button">Search</button>
   </div>
 
   <div class="qrow" id="additionalDetails" style="margin-bottom:16px; border-top:1px solid var(--line);">
@@ -989,13 +1006,61 @@
     }
   }
 
+  // Establishment search: pulls every inspection for a name and fills the page.
+  const estabName = document.getElementById('estabName');
+  const estabState = document.getElementById('estabState');
+  const estabYears = document.getElementById('estabYears');
+
+  function sinceDate(years) {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - (Number(years) || 5));
+    return d.toISOString().slice(0, 10);
+  }
+
+  async function searchEstablishment() {
+    const name = estabName.value.trim();
+    if (!name) { setStatus('Enter an establishment name to search.', true); estabName.focus(); return; }
+
+    const params = new URLSearchParams({ name, since: sinceDate(estabYears.value), limit: '25' });
+    if (estabState.value.trim()) params.set('state', estabState.value.trim().toUpperCase());
+
+    setStatus('Searching…');
+    try {
+      const res = await fetch(`${API.base}/inspection?${params}`);
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      const records = Array.isArray(body) ? body : [body];
+      renderRecords(records);
+      setStatus(records.length
+        ? `${records.length} inspection${records.length === 1 ? '' : 's'} for "${name}"`
+        : `No inspections found for "${name}" in the last ${estabYears.value} years.`,
+        !records.length);
+    } catch (err) {
+      setStatus('Search failed: ' + err.message, true);
+    }
+  }
+
+  document.getElementById('estabSearchBtn').addEventListener('click', searchEstablishment);
+  [estabName, estabState, estabYears].forEach(el =>
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') searchEstablishment(); }));
+
+  // A ?name= in the URL prefills and runs the search.
+  (function prefillFromUrl() {
+    const q = new URLSearchParams(location.search);
+    if (q.get('name')) estabName.value = q.get('name');
+    if (q.get('state')) estabState.value = q.get('state');
+  })();
+
+  window.violationsDesk.searchEstablishment = searchEstablishment;
   window.violationsDesk.renderRecords = renderRecords;
   window.violationsDesk.fillRecord = fillRecord;
   window.violationsDesk.loadFromApi = loadFromApi;
   if (API.query().toString()) loadFromApi();
 
   document.getElementById('getOshaBtn').addEventListener('click', () => {
-    if (API.query().toString()) loadFromApi(); else addRecord();
+    if (estabName.value.trim()) searchEstablishment();
+    else if (API.query().toString()) loadFromApi();
+    else addRecord();
   });
 
   // Field-help menu opens on hover; the button also toggles it for keyboard/touch.
