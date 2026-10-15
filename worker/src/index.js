@@ -81,22 +81,62 @@ async function searchInspections(env, { name, state, since, limit = 25 }) {
   return dol(env, 'inspection', { and: conds }, { limit: Math.min(limit, 200) });
 }
 
+const inList = (field, values) => ({ and: [{ field, operator: 'in', value: values }] });
+
+/**
+ * Load full detail for a set of inspections in a handful of calls rather than
+ * five calls per inspection. Cloudflare caps the outbound requests one Worker
+ * invocation may make, and a per-inspection loop blows through that cap.
+ */
+async function loadInspections(env, inspections) {
+  if (!inspections.length) return [];
+  const ids = inspections.map(i => String(i.activity_nr));
+
+  const [violations, events, injuries] = await Promise.all([
+    dol(env, 'violation', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
+    dol(env, 'violation_event', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
+    dol(env, 'accident_injury', inList('rel_insp_nr', ids), { limit: 200 }).catch(() => [])
+  ]);
+
+  // Accident narratives, in one more call, keyed by the injuries' summary numbers.
+  const summaryNrs = [...new Set(injuries.map(i => String(i.summary_nr)).filter(Boolean))];
+  const accidents = summaryNrs.length
+    ? await dol(env, 'accident', inList('summary_nr', summaryNrs), { limit: 200 }).catch(() => [])
+    : [];
+
+  const by = (rows, field) => {
+    const m = new Map();
+    (rows || []).forEach(r => {
+      const k = String(r[field]);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(r);
+    });
+    return m;
+  };
+  const vByInsp = by(violations, 'activity_nr');
+  const eByInsp = by(events, 'activity_nr');
+  const iByInsp = by(injuries, 'rel_insp_nr');
+  const aBySummary = by(accidents, 'summary_nr');
+
+  return inspections.map(insp => {
+    const id = String(insp.activity_nr);
+    const myInjuries = iByInsp.get(id) || [];
+    const summaryNr = myInjuries[0]?.summary_nr;
+    return {
+      insp,
+      violations: vByInsp.get(id) || [],
+      events: eByInsp.get(id) || [],
+      injuries: myInjuries,
+      accident: summaryNr ? (aBySummary.get(String(summaryNr)) || [])[0] || null : null
+    };
+  });
+}
+
 async function loadInspection(env, activityNr) {
   const [insp] = await dol(env, 'inspection', eq('activity_nr', activityNr), { limit: 1 });
   if (!insp) return null;
-
-  const [violations, events, injuries] = await Promise.all([
-    dol(env, 'violation', eq('activity_nr', activityNr)),
-    dol(env, 'violation_event', eq('activity_nr', activityNr)).catch(() => []),
-    dol(env, 'accident_injury', eq('rel_insp_nr', activityNr)).catch(() => [])
-  ]);
-
-  let accident = null;
-  const summaryNr = injuries[0]?.summary_nr;
-  if (summaryNr) {
-    [accident] = await dol(env, 'accident', eq('summary_nr', summaryNr), { limit: 1 }).catch(() => []);
-  }
-  return { insp, violations, events, injuries, accident };
+  const [record] = await loadInspections(env, [insp]);
+  return record;
 }
 
 // ---------- mapping to the UI's shape ----------
@@ -234,15 +274,12 @@ export default {
           return json(raw ? data : mapRecord(data), request, env);
         }
 
-        // by name: look up matches, then load each one
+        // by name: look up matches, then load them all in one batch
         const limit = Math.min(Number(q.get('limit')) || 10, 25);
         const matches = await searchInspections(env, {
           name: q.get('name'), state: q.get('state'), since: q.get('since'), limit
         });
-        const loaded = await Promise.all(
-          matches.slice(0, limit).map(m => loadInspection(env, String(m.activity_nr)))
-        );
-        const found = loaded.filter(Boolean);
+        const found = await loadInspections(env, matches.slice(0, limit));
         return json(raw ? found : found.map(mapRecord), request, env);
       }
 
