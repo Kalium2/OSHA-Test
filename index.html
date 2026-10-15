@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Violations Desk — Manual Field Mapping Template</title>
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --bg-sunken: #FAFAFA;
+    --ink: #1A1A1A;
+    --ink-soft: #5A5F66;
+    --ink-faint: #8A8F96;
+    --line: #DDDDDD;
+    --line-strong: #C6C6C6;
+    --link: #1456B0;
+    --select-bg: #F2F3F4;
+    --select-border: #CBCCCE;
+    --badge-bg: #26272A;
+    --badge-ink: #FFFFFF;
+    --danger: #A4342A;
+    --danger-bg: #FBEBE9;
+    --focus: #1456B0;
+    --row-head-bg: #FFFFFF;
+
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--sans); margin: 0; font-size: 13px; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { min-height: 100%; }
+
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 20px 20px 70px; }
+
+  .qrow { border: 1px solid var(--line); border-top: none; background: var(--bg); }
+  .qrow:first-child { border-top: 1px solid var(--line); }
+  .qrow-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 11px 16px; flex-wrap: wrap; }
+  .qrow-label { display: flex; align-items: center; gap: 6px; flex: 1 1 320px; }
+  .qrow-label .lbl { font-weight: 700; font-size: 13px; color: var(--ink); }
+  .info-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 13px; height: 13px; border-radius: 50%; background: var(--badge-bg); color: var(--badge-ink);
+    font-size: 9px; font-weight: 700; font-style: italic; flex: none;
+  }
+  .qrow-body { border-top: 1px solid var(--line); padding: 10px 16px 14px; }
+  .qrow-body textarea {
+    width: 100%; min-height: 56px; resize: none; overflow: hidden; font-family: var(--sans); font-size: 12.5px;
+    color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 3px; padding: 9px 10px;
+  }
+  .qrow-body textarea::placeholder { color: var(--ink-faint); }
+  .qrow-body textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+  /* ---- top action bar ---- */
+  .search-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  .load-status { font-size: 12px; color: var(--ink-soft); }
+  .load-status.error { color: var(--danger); font-weight: 600; }
+  .osha-link { margin: 0 auto; color: var(--link); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+  .osha-link:hover { text-decoration: underline; }
+
+  /* hover tooltip on the info badge */
+  .info-badge[data-tip] { position: relative; cursor: help; }
+  .info-badge[data-tip]::after {
+    content: attr(data-tip); position: absolute; left: 50%; top: calc(100% + 7px); transform: translateX(-12px);
+    width: 290px; background: var(--badge-bg); color: var(--badge-ink); font-size: 11.5px; font-weight: 400; font-style: normal;
+    line-height: 1.45; padding: 8px 10px; border-radius: 4px; z-index: 50; text-align: left;
+    opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+  }
+  .info-badge[data-tip]:hover::after, .info-badge[data-tip]:focus-visible::after { opacity: 1; visibility: visible; }
+
+  /* master field-help menu */
+  .tip-menu { position: relative; }
+  .tip-menu-btn {
+    width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--bg-sunken);
+    color: var(--ink-soft); font-size: 12px; font-weight: 700; cursor: help; line-height: 1;
+  }
+  .tip-menu-btn:hover, .tip-menu:focus-within .tip-menu-btn { background: var(--badge-bg); color: var(--badge-ink); border-color: var(--badge-bg); }
+  .tip-menu-panel {
+    position: absolute; right: 0; top: calc(100% + 6px); width: 340px; max-width: 90vw; z-index: 60;
+    background: var(--bg); border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+    padding: 12px 14px; opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+  }
+  .tip-menu:hover .tip-menu-panel, .tip-menu:focus-within .tip-menu-panel, .tip-menu.open .tip-menu-panel { opacity: 1; visibility: visible; }
+  .tip-menu-title { margin: 0 0 8px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+  .tip-menu-panel dl { margin: 0; font-size: 12px; line-height: 1.45; }
+  .tip-menu-panel dt { font-weight: 700; color: var(--ink); margin-top: 8px; }
+  .tip-menu-panel dt:first-child { margin-top: 0; }
+  .tip-menu-panel dd { margin: 2px 0 0; color: var(--ink-soft); }
+
+  .btn {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 700; padding: 8px 16px;
+    border-radius: 3px; border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+  }
+  .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .btn-primary { background: var(--link); color: #fff; }
+  .btn-primary:hover { filter: brightness(0.92); }
+  .btn-ghost { background: var(--select-bg); border-color: var(--select-border); color: var(--ink); }
+  .btn-ghost:hover { background: var(--line); }
+  .btn-sm { font-size: 11.5px; padding: 5px 10px; }
+  .btn-danger-ghost { background: var(--bg); border: 1px solid var(--line-strong); color: var(--danger); }
+  .btn-danger-ghost:hover { background: var(--danger-bg); }
+  .btn-text { background: none; border: none; color: var(--link); font-size: 12.5px; cursor: pointer; padding: 3px 2px; font-weight: 600; }
+  .btn-text:hover { text-decoration: underline; }
+
+  /* ---- generic inline editable field ---- */
+  .f-input {
+    font-family: var(--sans); font-size: 12.5px; color: var(--ink); background: var(--bg-sunken);
+    border: 1px solid var(--line-strong); border-radius: 3px; padding: 5px 7px; width: 100%;
+  }
+  .f-input:focus { outline: 2px solid var(--focus); outline-offset: 1px; background: var(--bg); }
+  .f-input.f-num { font-family: var(--mono); text-align: right; }
+  .f-input.f-sm { width: 90px; }
+  .activity-link.f-sm { width: 110px; }
+  .f-money-wrap { display: inline-flex; align-items: center; gap: 3px; }
+  .f-money-wrap .sign { color: var(--ink-faint); font-family: var(--mono); font-size: 11.5px; }
+  .f-readonly { background: var(--select-bg); color: var(--ink-soft); }
+  textarea.f-input { resize: none; overflow: hidden; min-height: 44px; }
+
+  /* ---- aggregate summary strip ---- */
+  .section-heading { font-size: 13px; font-weight: 700; color: var(--ink); margin: 18px 0 10px; }
+  .agg-strip { display: none; margin-bottom: 16px; border: 1px solid var(--line); }
+  .agg-strip.visible { display: grid; grid-template-columns: repeat(8, 1fr); }
+  .agg-tile { background: var(--bg); padding: 10px 10px; text-align: center; border-right: 1px solid var(--line); }
+  .agg-tile:last-child { border-right: none; }
+  .agg-tile .n { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--ink); }
+  .agg-tile .l { font-size: 10.5px; color: var(--ink-soft); margin-top: 2px; }
+  .agg-tile.money .n { color: var(--link); }
+
+  /* ---- empty state ---- */
+  .empty-state { padding: 46px 20px; text-align: center; color: var(--ink-faint); border: 1px dashed var(--line-strong); }
+  .empty-state .glyph { font-size: 22px; margin-bottom: 10px; opacity: 0.6; }
+  .empty-state h3 { font-weight: 700; font-size: 14px; color: var(--ink-soft); margin: 0 0 5px; }
+  .empty-state p { font-size: 12.5px; max-width: 360px; margin: 0 auto; line-height: 1.5; }
+
+  /* ---- inspections results table ---- */
+  .inspections-table-wrap { border: 1px solid var(--line); margin-top: 16px; }
+  table.inspections-table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+  table.inspections-table thead th {
+    font-size: 10.5px; font-weight: 700; color: var(--ink-soft); background: var(--bg-sunken);
+    border-bottom: 1px solid var(--line-strong); padding: 8px 8px; text-align: left; white-space: normal;
+  }
+  table.inspections-table thead th.num { text-align: right; }
+  table.inspections-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+  table.inspections-table tr.insp-detail-row > td { overflow: visible; white-space: normal; }
+  /* fixed column widths for the results tables (live + deleted) */
+  table.inspections-table thead th:nth-child(1) { width: 52px; }
+  table.inspections-table thead th:nth-child(2) { width: 112px; }
+  table.inspections-table thead th:nth-child(3) { width: 102px; }
+  table.inspections-table thead th:nth-child(4) { width: 102px; }
+  table.inspections-table thead th:nth-child(5) { width: 52px; }
+  table.inspections-table thead th:nth-child(n+6):nth-child(-n+10) { width: 68px; }
+  table.inspections-table thead th:nth-child(12) { width: 120px; }
+  table.inspections-table thead th:nth-child(13) { width: 80px; }
+  table.inspections-table thead th.fatcat-col, table.inspections-table td.fatcat-cell { text-align: center; }
+  table.inspections-table td > .f-input { width: 100%; min-width: 0; }
+  table.inspections-table td.num { font-family: var(--mono); text-align: right; }
+
+  .fatcat-box { min-height: 28px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg-sunken); display: flex; align-items: center; justify-content: center; padding: 2px; }
+  .fatcat-tag { font-size: 9.5px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+  tr.insp-row:hover { background: var(--bg-sunken); }
+  tr.insp-row.expanded { background: var(--bg-sunken); }
+  tr.insp-row .insp-cell-num { display: flex; align-items: center; gap: 6px; font-family: var(--mono); }
+  .insp-chevron { font-size: 9px; color: var(--ink-faint); display: inline-block; transition: transform 0.15s ease; flex: none; cursor: pointer; }
+  tr.insp-row.expanded .insp-chevron { transform: rotate(90deg); }
+  .activity-link { color: var(--link); text-decoration: none; font-weight: 600; }
+  .activity-link.case-open { font-style: italic; }
+
+  tr.insp-detail-row > td { padding: 0; border-bottom: 1px solid var(--line); }
+  tr.insp-detail-row.hidden { display: none; }
+  .record-detail { background: var(--bg); }
+
+  
+  table.inspections-table td.last-run { font-family: var(--mono); font-size: 10.5px; color: var(--ink-soft); white-space: normal; }
+
+  .info-grid { display: grid; border-bottom: 1px solid var(--line); }
+  .info-grid.cols-3 { grid-template-columns: 1.3fr 1fr 1fr; }
+  .info-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .info-grid.cols-3-even { grid-template-columns: repeat(3, 1fr); }
+  .info-grid.cols-addr { grid-template-columns: 1.6fr 1.6fr 1fr; }
+  .info-cell { padding: 8px 12px; border-right: 1px solid var(--line); font-size: 12.5px; }
+  .info-cell:last-child { border-right: none; }
+  .info-cell .kv { margin-bottom: 6px; }
+  .info-cell .kv:last-child { margin-bottom: 0; }
+  .info-cell .k { font-weight: 700; color: var(--ink); display: block; margin-bottom: 3px; }
+  .info-cell .addr-label { font-weight: 700; margin-bottom: 4px; }
+
+  .row-link { color: var(--link); text-decoration: none; font-weight: 600; }
+
+  select.f-input { appearance: none; -webkit-appearance: none; width: auto; min-width: 110px; padding: 5px 24px 5px 8px;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: calc(100% - 13px) 55%, calc(100% - 8px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  }
+
+  tr.citations-row > td { border-bottom: none; }
+  tr.citation-def-row > td { padding-top: 0; padding-bottom: 8px; }
+  .cit-def { display: flex; align-items: flex-start; gap: 8px; }
+  .record-detail td textarea.f-stdDefinition { flex: 1 1 auto; min-height: 0; display: block; font-size: 12px; }
+
+  .investigation-summary { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .inv-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .inv-title { font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; }
+  .inv-badge {
+    font-size: 9.5px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg);
+    padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .inv-badge[hidden] { display: none; }
+  .inv-meta-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; font-size: 12.5px; margin-bottom: 10px; }
+  .inv-meta-row .k { font-weight: 700; color: var(--ink); margin-right: 6px; }
+  .inv-meta-row .static-text { color: var(--ink); }
+  .inv-narrative-row { margin-bottom: 10px; }
+  .inv-keywords-row { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin-top: 12px; }
+  .inv-keywords-row .k { font-weight: 700; color: var(--ink); }
+  .inv-subheading { font-size: 12.5px; font-weight: 700; color: var(--ink); margin: 0 0 8px; }
+
+  .section { padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .section:last-child { border-bottom: none; }
+  .section-title { font-size: 11.5px; font-weight: 700; color: var(--ink); margin: 0 0 8px; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+  .section-title .tag {
+    font-size: 9.5px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg);
+    padding: 1px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .section-title .title-left { display: flex; align-items: center; gap: 6px; }
+
+  .table-scroll { overflow: visible; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+  .record-detail td .f-input.f-sm { width: 100%; min-width: 0; }
+  .record-detail td .f-input { padding: 5px 3px 5px 5px; font-size: 11.5px; }
+  .record-detail .f-money-wrap { display: flex; width: 100%; }
+  .record-detail .f-money-wrap .f-input { flex: 1 1 auto; min-width: 0; }
+  th, td { padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--line); }
+  thead th { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); border-bottom: 1px solid var(--line-strong); white-space: normal; vertical-align: bottom; }
+  td.num, th.num { font-family: var(--mono); text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .del-icon {
+    background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 3px;
+  }
+  .del-icon:hover { color: var(--danger); background: var(--danger-bg); }
+
+  .no-citations {
+    padding: 16px 4px; color: var(--ink-faint); font-size: 12.5px; text-align: center;
+    border: 1px dashed var(--line-strong);
+  }
+
+  .details-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px; }
+  .saved-meta { font-size: 11px; color: var(--ink-faint); }
+  .saved-meta.confirmed { color: var(--link); font-weight: 600; }
+
+  /* ---- deleted inspections ---- */
+  details.deleted-archive { margin-top: 24px; border: 1px solid var(--line); background: var(--bg); }
+  details.deleted-archive > summary {
+    list-style: none; cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 700; color: var(--ink-soft);
+  }
+  details.deleted-archive > summary::-webkit-details-marker { display: none; }
+  details.deleted-archive > summary .chev { transition: transform 0.15s ease; font-size: 10px; }
+  details.deleted-archive[open] > summary .chev { transform: rotate(90deg); }
+  .deleted-body { padding: 0; border-top: 1px solid var(--line); }
+  .deleted-body .inspections-table-wrap { border: none; margin-top: 0; opacity: 0.8; }
+
+  /* ---- delete confirmation modal ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(20,20,22,0.45); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: var(--bg); border: 1px solid var(--line-strong); border-radius: 4px;
+    width: 100%; max-width: 440px; padding: 20px 20px 16px; box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  }
+  .modal-box h3 { margin: 0 0 6px; font-size: 14.5px; font-weight: 700; color: var(--ink); }
+  .modal-sub { margin: 0 0 14px; font-size: 12.5px; color: var(--ink-soft); }
+  .modal-box label { display: block; font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+  .modal-box label .req { color: var(--danger); }
+  .modal-box textarea {
+    width: 100%; min-height: 80px; resize: none; overflow: hidden; font-family: var(--sans); font-size: 12.5px;
+    color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 3px; padding: 9px 10px;
+  }
+  .modal-box textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .btn-danger-solid { background: var(--danger); color: #fff; }
+  .btn-danger-solid:hover { filter: brightness(0.92); }
+  .btn-danger-solid:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  @media (max-width: 1100px) {
+    /* keep Establishment Name usable on narrow screens: drop the Last Run column */
+    table.inspections-table thead th:nth-child(12),
+    table.inspections-table tr.insp-row > td:nth-child(12) { display: none; }
+  }
+  @media (max-width: 760px) {
+    .agg-strip.visible { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .agg-strip.visible { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="search-bar">
+    <button class="btn btn-primary" id="getOshaBtn" type="button">Refresh OSHA Data</button>
+    <span class="load-status" id="loadStatus" role="status"></span>
+    <a class="osha-link" href="https://www.osha.gov/ords/imis/establishment.html" target="_blank" rel="noopener noreferrer">OSHA Establishment Search ↗</a>
+    <div class="tip-menu">
+      <button class="tip-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Field help">?</button>
+      <div class="tip-menu-panel" role="menu">
+        <p class="tip-menu-title">Field guide</p>
+        <dl>
+          <dt>Underwriter Notes</dt><dd>Record your notes on any Serious, Willful, Repeat, and FAT/CAT's. Detail information from agent's or loss control.</dd>
+          <dt>Five Year History</dt><dd>Totals across all active inspections. Deleted inspections are excluded.</dd>
+          <dt>FAT/CAT</dt><dd>Flags a fatality or catastrophe inspection. Set from the OSHA data point.</dd>
+          <dt>Violation Items</dt><dd>One row per citation. Current and initial penalties roll up into Five Year History.</dd>
+          <dt>FTA Penalty</dt><dd>FTA = Penalty for Failure to Abate.</dd>
+          <dt>Cited standard details</dt><dd>The definition of the standard cited on the row above.</dd>
+          <dt>Investigation Summary</dt><dd>Incident narrative, keywords and the injured-worker detail for the investigated inspection.</dd>
+          <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="qrow" id="additionalDetails" style="margin-bottom:16px; border-top:1px solid var(--line);">
+    <div class="qrow-head">
+      <div class="qrow-label">
+        <span class="info-badge" tabindex="0" data-tip="Record your notes on any Serious, Willful, Repeat, and FAT/CAT's. Detail information from agent's or loss control.">i</span>
+        <span class="lbl">Underwriter Notes</span>
+      </div>
+    </div>
+    <div class="qrow-body">
+      <textarea id="additionalDetailsNote" placeholder="Add a note…"></textarea>
+      <div class="details-footer">
+        <span class="saved-meta" id="additionalDetailsMeta">Not yet saved</span>
+        <button class="btn btn-ghost btn-sm" id="saveAdditionalDetails" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-heading">Five Year History</h2>
+
+  <div class="agg-strip" id="aggStrip">
+    <div class="agg-tile"><div class="n">—</div><div class="l">Serious</div></div>
+    <div class="agg-tile"><div class="n">—</div><div class="l">Willful</div></div>
+    <div class="agg-tile"><div class="n">—</div><div class="l">Repeat</div></div>
+    <div class="agg-tile"><div class="n">—</div><div class="l">FAT/CAT</div></div>
+    <div class="agg-tile"><div class="n">—</div><div class="l">Other</div></div>
+    <div class="agg-tile"><div class="n">—</div><div class="l">Unclass.</div></div>
+    <div class="agg-tile money"><div class="n">—</div><div class="l">Total current penalties</div></div>
+    <div class="agg-tile money"><div class="n">—</div><div class="l">Total original penalties</div></div>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="glyph">⚠</div>
+    <h3>No inspection loaded</h3>
+    <p>Click "Get OSHA data" to add a blank inspection form, then fill in each field directly to test how your data maps to the layout.</p>
+  </div>
+
+  <div class="inspections-table-wrap" id="inspectionsTableWrap" style="display:none;">
+    <table class="inspections-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Inspection</th>
+          <th>Date Opened</th>
+          <th>Case Status</th>
+          <th>ST</th>
+          <th class="num">Serious</th>
+          <th class="num">Willful</th>
+          <th class="num">Repeat</th>
+          <th class="fatcat-col">FAT/CAT</th>
+          <th class="num">Other</th>
+          <th>Establishment Name</th>
+          <th>Last Run</th>
+          <th class="act-col"></th>
+        </tr>
+      </thead>
+      <tbody id="recordsBody"></tbody>
+    </table>
+  </div>
+
+  <details class="deleted-archive" id="deletedArchive">
+    <summary><span class="chev">▶</span> Deleted Inspections <span id="deletedCountLabel" style="color:var(--ink-faint); font-weight:400;">(0)</span></summary>
+    <div class="deleted-body">
+      <div class="inspections-table-wrap" id="deletedTableWrap" style="display:none;">
+        <table class="inspections-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Activity</th>
+              <th>Date Opened</th>
+              <th>Case Status</th>
+              <th>ST</th>
+              <th class="num">Serious</th>
+              <th class="num">Willful</th>
+              <th class="num">Repeat</th>
+              <th class="fatcat-col">FAT/CAT</th>
+              <th class="num">Other</th>
+              <th>Establishment Name</th>
+              <th>Last Run</th>
+              <th class="act-col"></th>
+            </tr>
+          </thead>
+          <tbody id="deletedBody"></tbody>
+        </table>
+      </div>
+      <p id="deletedEmptyMsg" style="font-size:12.5px; color:var(--ink-faint); margin:14px 16px;">Inspections removed from the active list appear here and can be restored.</p>
+    </div>
+  </details>
+
+</div>
+
+<template id="recordDetailTemplate">
+  <div class="record-detail">
+    <div class="info-grid cols-addr">
+      <div class="info-cell">
+        <div class="addr-label">Site Address:</div>
+        <textarea class="f-input f-siteAddress" rows="3" placeholder="Company name&#10;Street&#10;City, State ZIP"></textarea>
+      </div>
+      <div class="info-cell">
+        <div class="addr-label">Mailing Address:</div>
+        <textarea class="f-input f-mailingAddress" rows="3"></textarea>
+      </div>
+      <div class="info-cell">
+        <div class="kv"><span class="k">NAICS:</span><input class="f-input f-naics" type="text"></div>
+        <div class="kv"><span class="k">Advanced Notice:</span><input class="f-input f-advancedNotice" type="text"></div>
+      </div>
+    </div>
+
+    <div class="info-grid cols-3-even">
+      <div class="info-cell"><div class="kv"><span class="k">Inspection Type:</span><input class="f-input f-inspectionType" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Scope:</span><input class="f-input f-scope" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Safety/Health:</span><input class="f-input f-safetyHealth" type="text"></div></div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">
+        <span class="title-left">Violation Items</span>
+        <button class="btn btn-ghost btn-sm" data-action="add-citation" type="button">+ Add citation</button>
+      </p>
+      <div class="table-scroll">
+        <table class="viol-table">
+          <colgroup>
+            <col style="width:30px"><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:8%">
+            <col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:8%">
+            <col style="width:9%"><col><col style="width:10%"><col style="width:26px">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Citation ID</th>
+              <th>Initial Citation Type</th>
+              <th>Current Citation Type</th>
+              <th>Standard Cited</th>
+              <th>Issuance Date</th>
+              <th>Abatement Due Date</th>
+              <th class="num">Current Penalty</th>
+              <th class="num">Initial Penalty</th>
+              <th class="num">FTA Penalty</th>
+              <th>Contest</th>
+              <th>Latest Event</th>
+              <th>Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody class="citations-body"></tbody>
+        </table>
+      </div>
+      <div class="no-citations">No citations yet — click "+ Add citation" to add one.</div>
+    </div>
+
+    <div class="investigation-summary">
+      <div class="inv-head">
+        <h3 class="inv-title">Investigation Summary</h3>
+        <span class="inv-badge" hidden>FAT/CAT</span>
+      </div>
+      <div class="inv-meta-row">
+        <div><span class="k">Investigation Nr:</span><input class="f-input f-invNr f-sm" type="text"></div>
+        <div><span class="k">Event:</span><input class="f-input f-invEvent f-sm" type="text" placeholder="MM/DD/YYYY"></div>
+      </div>
+      <div class="inv-narrative-row">
+        <textarea class="f-input f-invNarrative" rows="2" placeholder="Incident narrative…"></textarea>
+      </div>
+      <p class="inv-subheading">Investigated Inspection</p>
+      <div class="table-scroll">
+        <table class="inv-table">
+          <colgroup>
+            <col style="width:30px"><col style="width:14%"><col style="width:7%"><col style="width:7%"><col style="width:20%"><col style="width:24%"><col>
+          </colgroup>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Inspection</th>
+              <th>Age</th>
+              <th>Sex</th>
+              <th>Degree of Injury</th>
+              <th>Nature of Injury</th>
+              <th>Occupation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><input class="f-input f-invInspection f-sm" type="text"></td>
+              <td><input class="f-input f-invAge f-sm" type="text"></td>
+              <td><input class="f-input f-invSex f-sm" type="text"></td>
+              <td><input class="f-input f-invDegree f-sm" type="text"></td>
+              <td><input class="f-input f-invNature f-sm" type="text"></td>
+              <td><input class="f-input f-invOccupation f-sm" type="text"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inv-keywords-row">
+        <span class="k">Keywords:</span>
+        <input class="f-input f-invKeywords" type="text">
+      </div>
+    </div>
+
+  </div>
+</template>
+
+<template id="citationRowTemplate">
+  <tr class="citations-row">
+    <td class="row-num"></td>
+    <td><input class="f-input f-sm" type="text" data-field="citationId"></td>
+    <td><input class="f-input f-sm" type="text" data-field="initialCitationType"></td>
+    <td><input class="f-input f-sm" type="text" data-field="citationType"></td>
+    <td><input class="f-input f-sm" type="text" data-field="standardCited"></td>
+    <td><input class="f-input f-sm" type="text" data-field="issuanceDate" placeholder="MM/DD/YYYY"></td>
+    <td><input class="f-input f-sm" type="text" data-field="abatementDueDate" placeholder="MM/DD/YYYY"></td>
+    <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="currentPenalty"></span></td>
+    <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="initialPenalty"></span></td>
+    <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="ftaPenalty"></span></td>
+    <td><input class="f-input f-sm" type="text" data-field="contest" placeholder="MM/DD/YYYY"></td>
+    <td><input class="f-input f-sm" type="text" data-field="latestEvent"></td>
+    <td><input class="f-input f-sm" type="text" data-field="note"></td>
+    <td><button class="del-icon" data-action="delete-citation" type="button" aria-label="Delete citation">✕</button></td>
+  </tr>
+</template>
+
+<template id="citationDefTemplate">
+  <tr class="citation-def-row">
+    <td colspan="14">
+      <div class="cit-def">
+        <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
+      </div>
+    </td>
+  </tr>
+</template>
+
+<div class="modal-overlay" id="deleteModalOverlay" style="display:none;">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <h3 id="deleteModalTitle">Delete inspection record?</h3>
+    <p class="modal-sub" id="deleteModalSub"></p>
+    <label for="deleteReasonInput">Reason for deletion <span class="req">*</span></label>
+    <textarea id="deleteReasonInput" placeholder="Explain why this inspection record is being deleted…"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="deleteModalCancel" type="button">Cancel</button>
+      <button class="btn btn-sm btn-danger-solid" id="deleteModalConfirm" type="button" disabled>Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  const recordsBody = document.getElementById('recordsBody');
+  const inspectionsTableWrap = document.getElementById('inspectionsTableWrap');
+  const emptyState = document.getElementById('emptyState');
+  const aggStrip = document.getElementById('aggStrip');
+  const detailTmpl = document.getElementById('recordDetailTemplate');
+  const citationRowTmpl = document.getElementById('citationRowTemplate');
+  const citationDefTmpl = document.getElementById('citationDefTemplate');
+  const deletedBody = document.getElementById('deletedBody');
+  const deletedTableWrap = document.getElementById('deletedTableWrap');
+  const deletedEmptyMsg = document.getElementById('deletedEmptyMsg');
+  const deletedCountLabel = document.getElementById('deletedCountLabel');
+  let deletedCount = 0;
+  let rowSeq = 0;
+
+  const aggTiles = aggStrip.querySelectorAll('.agg-tile .n');
+  const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  const money = (n) => '$' + num(n).toLocaleString('en-US');
+
+  // ---- shared delete-confirmation modal ----
+  const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+  const deleteModalSub = document.getElementById('deleteModalSub');
+  const deleteReasonInput = document.getElementById('deleteReasonInput');
+  const deleteModalCancel = document.getElementById('deleteModalCancel');
+  const deleteModalConfirm = document.getElementById('deleteModalConfirm');
+  let pendingDeleteCallback = null;
+
+  function openDeleteModal(label, onConfirm) {
+    pendingDeleteCallback = onConfirm;
+    deleteModalSub.textContent = label;
+    deleteReasonInput.value = '';
+    deleteModalConfirm.disabled = true;
+    deleteModalOverlay.style.display = 'flex';
+    deleteReasonInput.focus();
+  }
+  function closeDeleteModal() {
+    deleteModalOverlay.style.display = 'none';
+    pendingDeleteCallback = null;
+  }
+  deleteReasonInput.addEventListener('input', () => {
+    deleteModalConfirm.disabled = deleteReasonInput.value.trim().length === 0;
+  });
+  deleteModalCancel.addEventListener('click', closeDeleteModal);
+  deleteModalOverlay.addEventListener('click', (e) => {
+    if (e.target === deleteModalOverlay) closeDeleteModal();
+  });
+  deleteModalConfirm.addEventListener('click', () => {
+    const reason = deleteReasonInput.value.trim();
+    if (!reason || !pendingDeleteCallback) return;
+    const cb = pendingDeleteCallback;
+    closeDeleteModal();
+    cb(reason);
+  });
+
+  function recalcAgg() {
+    const rows = recordsBody.querySelectorAll('tr.insp-row');
+    if (!rows.length) { aggStrip.classList.remove('visible'); return; }
+    let t = { serious: 0, willful: 0, repeat: 0, fatcat: 0, other: 0, unclass: 0, curr: 0, orig: 0 };
+    rows.forEach(r => {
+      t.serious += num(r.dataset.serious);
+      t.willful += num(r.dataset.willful);
+      t.repeat += num(r.dataset.repeat);
+      if (r.dataset.fatcat) t.fatcat += 1;
+      t.other += num(r.dataset.other);
+      t.unclass += num(r.dataset.unclass);
+      t.curr += num(r.dataset.currPenalty);
+      t.orig += num(r.dataset.origPenalty);
+    });
+    aggTiles[0].textContent = t.serious;
+    aggTiles[1].textContent = t.willful;
+    aggTiles[2].textContent = t.repeat;
+    aggTiles[3].textContent = t.fatcat;
+    aggTiles[4].textContent = t.other;
+    aggTiles[5].textContent = t.unclass;
+    aggTiles[6].textContent = money(t.curr);
+    aggTiles[7].textContent = money(t.orig);
+    aggStrip.classList.add('visible');
+  }
+
+  function updateDeletedUI() {
+    deletedCountLabel.textContent = '(' + deletedCount + ')';
+    const hasAny = deletedCount > 0;
+    deletedTableWrap.style.display = hasAny ? 'block' : 'none';
+    deletedEmptyMsg.style.display = hasAny ? 'none' : 'block';
+  }
+
+  function addCitationRow(detailEl) {
+    const node = citationRowTmpl.content.cloneNode(true);
+    const row = node.querySelector('tr');
+    const body = detailEl.querySelector('.citations-body');
+    body.appendChild(row);
+
+    // Definition sub-row directly under this violation item, populated from the standards data source.
+    const defRow = citationDefTmpl.content.cloneNode(true).querySelector('tr');
+    body.appendChild(defRow);
+    const defText = defRow.querySelector('.f-stdDefinition');
+    // Production: set the definition from the data source, e.g.
+    //   defText.value = lookupStandardDefinition(standardCited); autosize(defText);
+
+    renumberCitations(detailEl);
+    row.querySelector('[data-action="delete-citation"]').addEventListener('click', () => {
+      row.remove();
+      defRow.remove();
+      renumberCitations(detailEl);
+      toggleNoCitations(detailEl);
+      if (detailEl._syncPenaltyTotalsFromItems) detailEl._syncPenaltyTotalsFromItems();
+    });
+    toggleNoCitations(detailEl);
+  }
+  function renumberCitations(detailEl) {
+    detailEl.querySelectorAll('.citations-body tr.citations-row').forEach((row, i) => {
+      row.querySelector('.row-num').textContent = (i + 1) + '.';
+    });
+  }
+  function toggleNoCitations(detailEl) {
+    const body = detailEl.querySelector('.citations-body');
+    const msg = detailEl.querySelector('.no-citations');
+    msg.style.display = body.children.length ? 'none' : 'block';
+  }
+
+  function wireDetail(detailEl, summaryRow) {
+    // Results-table Serious/Willful/Repeat/Other are standalone fill-in boxes
+    // (Violation Summary, which used to drive them, has been removed).
+    const rowInputs = Array.from(summaryRow.querySelectorAll('td.num input[data-cat]'));
+    rowInputs.forEach(rowInp => {
+      rowInp.addEventListener('input', () => {
+        summaryRow.dataset[rowInp.dataset.cat] = rowInp.value || 0;
+        recalcAgg();
+      });
+    });
+
+    // Total current/original penalties now come from the Violation Items rows instead.
+    function syncPenaltyTotalsFromItems() {
+      const rows = Array.from(detailEl.querySelectorAll('.citations-body tr.citations-row'));
+      let curr = 0, orig = 0;
+      rows.forEach(row => {
+        const currInp = row.querySelector('input[data-field="currentPenalty"]');
+        const initInp = row.querySelector('input[data-field="initialPenalty"]');
+        if (currInp) curr += num(currInp.value);
+        if (initInp) orig += num(initInp.value);
+      });
+      summaryRow.dataset.currPenalty = curr;
+      summaryRow.dataset.origPenalty = orig;
+      recalcAgg();
+    }
+    detailEl.addEventListener('input', (e) => {
+      if (e.target.matches('input[data-field="currentPenalty"], input[data-field="initialPenalty"]')) {
+        syncPenaltyTotalsFromItems();
+      }
+    });
+    detailEl._syncPenaltyTotalsFromItems = syncPenaltyTotalsFromItems;
+
+    detailEl.querySelector('[data-action="add-citation"]').addEventListener('click', () => {
+      addCitationRow(detailEl);
+      syncPenaltyTotalsFromItems();
+    });
+
+    const caseStatusInput = summaryRow.querySelector('.case-status-input');
+    function applyCaseStatus() {
+      const activityInput = summaryRow.querySelector('.activity-link');
+      if (activityInput) activityInput.classList.toggle('case-open', caseStatusInput.value.trim().toUpperCase() === 'OPEN');
+    }
+    caseStatusInput.addEventListener('input', applyCaseStatus);
+    applyCaseStatus();
+  }
+
+  function addRecord() {
+    rowSeq += 1;
+    const n = rowSeq;
+    const lastRun = new Date().toLocaleString('en-US', {
+      month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+
+    const summaryRow = document.createElement('tr');
+    summaryRow.className = 'insp-row';
+    summaryRow.dataset.serious = 0; summaryRow.dataset.willful = 0; summaryRow.dataset.repeat = 0;
+    summaryRow.dataset.other = 0; summaryRow.dataset.unclass = 0; summaryRow.dataset.fatcat = '';
+    summaryRow.dataset.currPenalty = 0; summaryRow.dataset.origPenalty = 0;
+
+    summaryRow.innerHTML =
+      '<td class="insp-cell-num"><span class="insp-chevron" data-action="toggle-row">▶</span>' + n + '</td>' +
+      '<td><input class="f-input activity-link f-sm" type="text" placeholder="e.g. 1844208.015"></td>' +
+      '<td><input class="f-input f-dateOpened f-sm" type="text" placeholder="MM/DD/YYYY"></td>' +
+      '<td><input class="f-input case-status-input f-sm" type="text" placeholder="OPEN / CLOSED"></td>' +
+      '<td><input class="f-input f-state f-sm" type="text" placeholder="CA"></td>' +
+      '<td class="num"><input class="f-input f-num f-sm" type="text" value="0" data-cat="serious"></td>' +
+      '<td class="num"><input class="f-input f-num f-sm" type="text" value="0" data-cat="willful"></td>' +
+      '<td class="num"><input class="f-input f-num f-sm" type="text" value="0" data-cat="repeat"></td>' +
+      '<td class="fatcat-cell"><div class="fatcat-box"></div></td>' +
+      '<td class="num"><input class="f-input f-num f-sm" type="text" value="0" data-cat="other"></td>' +
+      '<td><input class="f-input f-establishment" type="text" placeholder="Establishment name"></td>' +
+      '<td class="last-run">' + lastRun + '</td>' +
+      '<td><button class="btn btn-sm btn-danger-ghost" data-action="delete-record" type="button">Delete</button></td>';
+
+    const activityInput = summaryRow.querySelector('.activity-link');
+
+    const detailNode = detailTmpl.content.cloneNode(true);
+    const detailEl = detailNode.querySelector('.record-detail');
+
+    const detailRow = document.createElement('tr');
+    detailRow.className = 'insp-detail-row hidden';
+    const detailTd = document.createElement('td');
+    detailTd.colSpan = 13;
+    detailTd.appendChild(detailEl);
+    detailRow.appendChild(detailTd);
+
+    const actionBtn = summaryRow.querySelector('[data-action="delete-record"]');
+    let isDeleted = false;
+
+    function label() {
+      return (summaryRow.querySelector('.f-establishment').value || 'Untitled inspection') +
+        ' — #' + (activityInput.value || '—');
+    }
+
+    function performDelete(reason) {
+      isDeleted = true;
+      summaryRow.dataset.deleteReason = reason;
+      summaryRow.title = 'Deletion reason: ' + reason;
+      summaryRow.remove();
+      detailRow.remove();
+      recalcAgg();
+      deletedCount += 1;
+      summaryRow.classList.remove('expanded');
+      detailRow.classList.add('hidden');
+      actionBtn.textContent = 'Restore';
+      actionBtn.classList.remove('btn-danger-ghost');
+      actionBtn.classList.add('btn-ghost');
+      deletedBody.appendChild(summaryRow);
+      deletedBody.appendChild(detailRow);
+      updateDeletedUI();
+      if (!recordsBody.children.length) {
+        emptyState.style.display = 'block';
+        inspectionsTableWrap.style.display = 'none';
+      }
+    }
+
+    function performRestore() {
+      isDeleted = false;
+      summaryRow.remove();
+      detailRow.remove();
+      deletedCount -= 1;
+      updateDeletedUI();
+      summaryRow.removeAttribute('title');
+      delete summaryRow.dataset.deleteReason;
+      actionBtn.textContent = 'Delete';
+      actionBtn.classList.remove('btn-ghost');
+      actionBtn.classList.add('btn-danger-ghost');
+      recordsBody.appendChild(summaryRow);
+      recordsBody.appendChild(detailRow);
+      emptyState.style.display = 'none';
+      inspectionsTableWrap.style.display = 'block';
+      recalcAgg();
+    }
+
+    actionBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!isDeleted) {
+        openDeleteModal(label(), performDelete);
+      } else {
+        performRestore();
+      }
+    });
+
+    summaryRow.querySelector('[data-action="toggle-row"]').addEventListener('click', () => {
+      const nowHidden = detailRow.classList.toggle('hidden');
+      summaryRow.classList.toggle('expanded', !nowHidden);
+      if (!nowHidden) detailRow.querySelectorAll('textarea').forEach(autosize);
+    });
+
+    wireDetail(detailEl, summaryRow);
+
+    recordsBody.appendChild(summaryRow);
+    recordsBody.appendChild(detailRow);
+    emptyState.style.display = 'none';
+    inspectionsTableWrap.style.display = 'block';
+    recalcAgg();
+    return summaryRow;
+  }
+
+  // FAT/CAT flag: off by default; only shown when the API returns a FAT/CAT data point.
+  // applyApiData(summaryRow, apiPayload) sets the table-row identifier, the badge in the
+  // Investigation Summary, and the Five Year History counter together. Any truthy
+  // `fatCat` value (true, "FAT", "CAT", ...) turns it on; missing/empty/false leaves it off.
+  function applyApiData(summaryRow, data) {
+    const v = data && data.fatCat;
+    const on = !!v && String(v).toLowerCase() !== 'false';
+    const label = on ? ((typeof v === 'string' && v.toLowerCase() !== 'true') ? v.toUpperCase() : 'FAT/CAT') : '';
+    summaryRow.dataset.fatcat = on ? '1' : '';
+
+    const cell = summaryRow.querySelector('.fatcat-box');
+    cell.textContent = '';
+    if (on) {
+      const tag = document.createElement('span');
+      tag.className = 'fatcat-tag';
+      tag.textContent = label;
+      cell.appendChild(tag);
+    }
+
+    const detailRow = summaryRow.nextElementSibling;
+    const badge = detailRow && detailRow.querySelector('.inv-badge');
+    if (badge) { badge.hidden = !on; badge.textContent = label || 'FAT/CAT'; }
+
+    recalcAgg();
+  }
+  // Hooks for the API integration.
+  window.violationsDesk = { addRecord: addRecord, applyApiData: applyApiData };
+
+
+  // ---- OSHA data loading (Cloudflare Worker proxy; the DOL key stays server-side) ----
+  const API = {
+    // Worker base URL. Overridable with ?api=https://... for testing against a preview deploy.
+    base: new URLSearchParams(location.search).get('api')
+      || (window.VIOLATIONS_DESK_CONFIG && window.VIOLATIONS_DESK_CONFIG.apiBase)
+      || 'https://violations-desk-osha.workers.dev',
+    // Which inspections to pull: ?activity=1844208015 or ?name=ACME&state=CA&since=2021-01-01
+    query() {
+      const q = new URLSearchParams(location.search);
+      const p = new URLSearchParams();
+      ['activity', 'name', 'state', 'since', 'limit'].forEach(k => { if (q.get(k)) p.set(k, q.get(k)); });
+      return p;
+    }
+  };
+  const loadStatus = document.getElementById('loadStatus');
+  function setStatus(text, isError) {
+    loadStatus.textContent = text || '';
+    loadStatus.classList.toggle('error', !!isError);
+  }
+
+  function setField(el, value) {
+    if (!el || value === null || value === undefined) return;
+    el.value = String(value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    if (el.tagName === 'TEXTAREA') autosize(el);
+  }
+
+  // Fill one inspection row + its detail panel from a mapped record.
+  function fillRecord(summaryRow, rec) {
+    const detailRow = summaryRow.nextElementSibling;
+    const d = detailRow.querySelector('.record-detail');
+    const q = sel => summaryRow.querySelector(sel);
+
+    setField(q('.activity-link'), rec.activityNr);
+    setField(q('.f-dateOpened'), rec.dateOpened);
+    setField(q('.case-status-input'), rec.caseStatus);
+    setField(q('.f-state'), rec.state);
+    setField(q('.f-establishment'), rec.establishment);
+    const c = rec.counts || {};
+    ['serious', 'willful', 'repeat', 'other'].forEach(k => setField(q(`input[data-cat="${k}"]`), c[k] ?? 0));
+    summaryRow.dataset.unclass = c.unclass ?? 0;
+
+    setField(d.querySelector('.f-siteAddress'), rec.siteAddress);
+    setField(d.querySelector('.f-mailingAddress'), rec.mailingAddress);
+    setField(d.querySelector('.f-naics'), rec.naics);
+    setField(d.querySelector('.f-inspectionType'), rec.inspectionType);
+    setField(d.querySelector('.f-scope'), rec.scope);
+    setField(d.querySelector('.f-safetyHealth'), rec.safetyHealth);
+    setField(d.querySelector('.f-advancedNotice'), rec.advancedNotice);
+
+    (rec.violationItems || []).forEach(item => {
+      addCitationRow(d);
+      const rows = d.querySelectorAll('.citations-body tr.citations-row');
+      const row = rows[rows.length - 1];
+      Object.keys(item).forEach(k => {
+        if (k === 'standardDetails') return;
+        setField(row.querySelector(`input[data-field="${k}"]`), item[k]);
+      });
+      const defBox = row.nextElementSibling && row.nextElementSibling.querySelector('.f-stdDefinition');
+      setField(defBox, item.standardDetails);
+    });
+
+    const inv = rec.investigation;
+    if (inv) {
+      setField(d.querySelector('.f-invNr'), inv.investigationNr);
+      setField(d.querySelector('.f-invEvent'), inv.event);
+      setField(d.querySelector('.f-invNarrative'), inv.narrative);
+      setField(d.querySelector('.f-invKeywords'), inv.keywords);
+      const first = (inv.injured || [])[0];
+      if (first) {
+        setField(d.querySelector('.f-invInspection'), first.inspection);
+        setField(d.querySelector('.f-invAge'), first.age);
+        setField(d.querySelector('.f-invSex'), first.sex);
+        setField(d.querySelector('.f-invDegree'), first.degreeOfInjury);
+        setField(d.querySelector('.f-invNature'), first.natureOfInjury);
+        setField(d.querySelector('.f-invOccupation'), first.occupation);
+      }
+    }
+
+    applyApiData(summaryRow, { fatCat: rec.fatCat });
+  }
+
+  // Replace the table with a fresh set of records.
+  function renderRecords(records) {
+    recordsBody.innerHTML = '';
+    rowSeq = 0;
+    records.forEach(rec => fillRecord(addRecord(), rec));
+    if (!records.length) {
+      emptyState.style.display = 'block';
+      inspectionsTableWrap.style.display = 'none';
+    }
+    recalcAgg();
+  }
+
+  async function loadFromApi() {
+    const params = API.query();
+    if (![...params.keys()].length) {
+      setStatus('Add ?activity=… or ?name=…&state=… to the URL to pull OSHA data.');
+      return;
+    }
+    setStatus('Loading…');
+    try {
+      const res = await fetch(`${API.base}/inspection?${params}`);
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      const records = Array.isArray(body) ? body : [body];
+      renderRecords(records);
+      setStatus(`${records.length} inspection${records.length === 1 ? '' : 's'} loaded ${new Date().toLocaleTimeString()}`);
+    } catch (err) {
+      setStatus('Could not load OSHA data: ' + err.message, true);
+    }
+  }
+
+  window.violationsDesk.renderRecords = renderRecords;
+  window.violationsDesk.fillRecord = fillRecord;
+  window.violationsDesk.loadFromApi = loadFromApi;
+  if (API.query().toString()) loadFromApi();
+
+  document.getElementById('getOshaBtn').addEventListener('click', () => {
+    if (API.query().toString()) loadFromApi(); else addRecord();
+  });
+
+  // Field-help menu opens on hover; the button also toggles it for keyboard/touch.
+  const tipMenuBtn = document.querySelector('.tip-menu-btn');
+  const tipMenu = document.querySelector('.tip-menu');
+  tipMenuBtn.addEventListener('click', () => {
+    const open = tipMenu.classList.toggle('open');
+    tipMenuBtn.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', (e) => {
+    if (!tipMenu.contains(e.target)) { tipMenu.classList.remove('open'); tipMenuBtn.setAttribute('aria-expanded', 'false'); }
+  });
+
+
+
+  // Auto-expanding text boxes: grow with their content, no manual resizing.
+  function autosize(el) {
+    if (!el.offsetParent) return; // hidden (e.g. collapsed row); sized when shown
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px'; // +2 = top/bottom border
+  }
+  window.violationsDesk.autosize = autosize; // call after filling a box from code
+  document.addEventListener('input', (e) => {
+    if (e.target.tagName === 'TEXTAREA') autosize(e.target);
+  });
+  window.addEventListener('resize', () => document.querySelectorAll('textarea').forEach(autosize));
+  document.querySelectorAll('textarea').forEach(autosize);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+name = "violations-desk-osha"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# Origins allowed to call this Worker from a browser.
+# Leave unset during local testing to allow any origin.
+[vars]
+ALLOWED_ORIGINS = ""
+
+# The DOL key is a secret, never a var:
+#   npx wrangler secret put DOL_API_KEY
