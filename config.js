@@ -5,5 +5,5 @@
  *          A ?api=... query parameter overrides it for one page load.
  */
 window.VIOLATIONS_DESK_CONFIG = {
-  apiBase: 'https://violations-desk-osha.workers.dev'
+  apiBase: 'https://violations-desk-osha.lambertdaniel26.workers.dev'
 };
