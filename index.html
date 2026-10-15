@@ -996,7 +996,7 @@
     setStatus('Loading…');
     try {
       const res = await fetch(`${API.base}/inspection?${params}`);
-      const body = await res.json();
+      const body = await readJson(res);
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
       const records = Array.isArray(body) ? body : [body];
       renderRecords(records);
@@ -1010,6 +1010,22 @@
   const estabName = document.getElementById('estabName');
   const estabState = document.getElementById('estabState');
   const estabYears = document.getElementById('estabYears');
+
+  // The Worker can return an empty body if it is cut short; say so plainly
+  // instead of failing with a JSON parse error.
+  async function readJson(res) {
+    const text = await res.text();
+    if (!text.trim()) {
+      throw new Error(res.ok
+        ? 'the server returned an empty response (the search may have been too large — try fewer years or add a state)'
+        : `the server returned nothing (HTTP ${res.status})`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`unexpected response from the server (HTTP ${res.status})`);
+    }
+  }
 
   function sinceDate(years) {
     const d = new Date();
@@ -1027,7 +1043,7 @@
     setStatus('Searching…');
     try {
       const res = await fetch(`${API.base}/inspection?${params}`);
-      const body = await res.json();
+      const body = await readJson(res);
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
       const records = Array.isArray(body) ? body : [body];
       renderRecords(records);
