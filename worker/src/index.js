@@ -61,7 +61,11 @@ const eq = (field, value) => ({ and: [{ field, operator: 'eq', value }] });
 
 async function searchInspections(env, { name, state, since, limit = 25 }) {
   const conds = [];
-  if (name) conds.push({ field: 'estab_name', operator: 'like', value: name.toUpperCase() });
+  if (name) {
+    // DOL's `like` needs explicit wildcards; add them when the caller hasn't.
+    const n = name.trim().toUpperCase();
+    conds.push({ field: 'estab_name', operator: 'like', value: n.includes('%') ? n : `%${n}%` });
+  }
   if (state) conds.push({ field: 'site_state', operator: 'eq', value: state.toUpperCase() });
   if (since) conds.push({ field: 'open_date', operator: 'gt', value: since });
   if (!conds.length) throw Object.assign(new Error('name, state or since is required'), { status: 400 });
