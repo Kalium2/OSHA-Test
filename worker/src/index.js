@@ -189,7 +189,16 @@ export default {
       });
     }
     if (request.method !== 'GET') return json({ error: 'GET only' }, request, env, 405);
-    if (url.pathname === '/health') return json({ ok: true }, request, env);
+    if (url.pathname === '/health') {
+      // `bindings` lists the NAMES this Worker can see (never values) so a missing
+      // or misspelled secret is easy to spot.
+      return json({
+        ok: true,
+        bindings: Object.keys(env).sort(),
+        hasKey: Boolean(env.DOL_API_KEY),
+        keyLength: env.DOL_API_KEY ? String(env.DOL_API_KEY).length : 0
+      }, request, env);
+    }
     if (!env.DOL_API_KEY) return json({ error: 'DOL_API_KEY is not set on this Worker' }, request, env, 500);
 
     const q = url.searchParams;
