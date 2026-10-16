@@ -76,6 +76,11 @@ function usDate(v) {
   return m ? `${m[2]}/${m[3]}/${m[1]}` : String(v);
 }
 
+// Jan 1 of (this year - 4): the current calendar year and the four before it.
+function defaultSince() {
+  return `${new Date().getFullYear() - 4}-01-01`;
+}
+
 async function searchInspections(env, { name, state, since, limit = 25 }) {
   const conds = [];
   if (name) {
@@ -84,8 +89,8 @@ async function searchInspections(env, { name, state, since, limit = 25 }) {
     conds.push({ field: 'estab_name', operator: 'like', value: n.includes('%') ? n : `%${n}%` });
   }
   if (state) conds.push({ field: 'site_state', operator: 'eq', value: state.toUpperCase() });
-  if (since) conds.push({ field: 'open_date', operator: 'gt', value: since });
-  if (!conds.length) throw Object.assign(new Error('name, state or since is required'), { status: 400 });
+  conds.push({ field: 'open_date', operator: 'gt', value: since || defaultSince() });
+  if (conds.length < 2) throw Object.assign(new Error('name or state is required'), { status: 400 });
   return dol(env, 'inspection', { and: conds }, { limit: Math.min(limit, 200) });
 }
 
@@ -180,6 +185,35 @@ function planningGuides(insp) {
 const hazSubs = v => [v.hazsub1, v.hazsub2, v.hazsub3, v.hazsub4, v.hazsub5]
   .map(x => String(x || '').trim()).filter(Boolean).join(', ');
 
+// Force ranking, worst first: Willful, FAT/CAT, Repeat, Serious, Other.
+// An inspection ranks by the most severe thing in it; citations rank the same
+// way within their inspection (FAT/CAT is an inspection-level flag only).
+const VIOL_RANK = { W: 1, R: 3, S: 4, O: 5, U: 6 };
+
+// A citation tied to a fatality or catastrophe outranks everything in its
+// inspection: rec 'A' is accident-related, 'I' imminent danger.
+const isAccidentCitation = v => ['A', 'I'].includes(String(v.rec || '').trim().toUpperCase());
+
+function inspectionRank(rec) {
+  const c = rec.counts || {};
+  if (c.willful > 0) return 1;
+  if (rec.fatCat) return 2;
+  if (c.repeat > 0) return 3;
+  if (c.serious > 0) return 4;
+  if (c.other > 0 || c.unclass > 0) return 5;
+  return 6;
+}
+
+// Most severe first, then the larger current penalty, then the newer inspection.
+function bySeverity(a, b) {
+  const r = inspectionRank(a) - inspectionRank(b);
+  if (r) return r;
+  const pen = (b.penalties?.current || 0) - (a.penalties?.current || 0);
+  if (pen) return pen;
+  const year = d => String(d || '').slice(-4);
+  return year(b.dateOpened).localeCompare(year(a.dateOpened));
+}
+
 // accident_abstract holds the narrative split across numbered lines.
 function abstractText(lines, accident) {
   const text = (lines || [])
@@ -228,7 +262,12 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
     },
     penalties: { current: sum('current_penalty'), initial: sum('initial_penalty') },
 
-    violationItems: live.map(v => ({
+    violationItems: live.slice().sort((x, y) => {
+      const jump = (isAccidentCitation(y) ? 1 : 0) - (isAccidentCitation(x) ? 1 : 0);
+      if (jump) return jump;
+      const r = (VIOL_RANK[x.viol_type] || 9) - (VIOL_RANK[y.viol_type] || 9);
+      return r || (parseFloat(y.current_penalty) || 0) - (parseFloat(x.current_penalty) || 0);
+    }).map(v => ({
       citationId: v.citation_id,
       initialCitationType: VIOL_TYPE[v.initial_viol_type] || v.initial_viol_type || '',
       citationType: VIOL_TYPE[v.viol_type] || v.viol_type || '',
@@ -247,7 +286,8 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       prompted: REC[v.rec] || v.rec || '',
       hazcat: v.hazcat || '',
       emphasis: flag(v.emphasis),
-      hazSubstances: hazSubs(v)
+      hazSubstances: hazSubs(v),
+      accidentRelated: isAccidentCitation(v)
     })),
 
     investigation: (accident || (injuries || []).length) ? {
@@ -345,7 +385,7 @@ export default {
           name: q.get('name'), state: q.get('state'), since: q.get('since'), limit
         });
         const found = await loadInspections(env, matches.slice(0, limit));
-        return json(raw ? found : found.map(mapRecord), request, env);
+        return json(raw ? found : found.map(mapRecord).sort(bySeverity), request, env);
       }
 
       return json({ error: 'Not found. Try /search, /inspection or /health' }, request, env, 404);
