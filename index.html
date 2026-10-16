@@ -267,6 +267,7 @@
   .inv-detail-grid .kv { margin: 0; }
   .inv-detail-grid .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
   .inv-detail-grid .f-input { background: var(--bg); font-size: 11.5px; }
+  .inv-detail-grid textarea.f-input, .info-cell textarea.f-input { min-height: 0; display: block; }
 
   .section { padding: 10px 16px; border-bottom: 1px solid var(--line); }
   .section:last-child { border-bottom: none; }
@@ -376,6 +377,7 @@
           <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
           <dt>Inspection Type / Scope / Safety-Health</dt><dd>Why the inspection happened, how much of the site it covered, and whether it was a safety or health inspection.</dd>
           <dt>Employees / Owner Type / Migrant Labor</dt><dd>Headcount at the site, private or government employer, and whether migrant labor was involved.</dd>
+          <dt>Emphasis Programs</dt><dd>National or local emphasis programs the inspection fell under, such as a fall-hazard or heat NEP. A targeted inspection rather than a random one.</dd>
           <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and by industry.</dd>
 
           <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other. Current and initial penalties roll up into Five Year History.</dd>
@@ -391,6 +393,7 @@
           <dt>Investigation Summary</dt><dd>Appears for accident inspections: the incident narrative, event date and time, and the injured worker's details.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
           <dt>Injury Detail</dt><dd>Part of body, source, event type, human and environmental factors, fall distances and any substance involved.</dd>
+          <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, and how far the worker fell.</dd>
           <dt>Keywords</dt><dd>OSHA's own keywords for the incident.</dd>
 
           <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
@@ -533,6 +536,10 @@
       <div class="info-cell"><div class="kv"><span class="k">Planning Guides:</span><input class="f-input f-planningGuides" type="text"></div></div>
     </div>
 
+    <div class="info-grid">
+      <div class="info-cell"><div class="kv"><span class="k">Emphasis Programs:</span><textarea class="f-input f-emphasis" rows="1"></textarea></div></div>
+    </div>
+
     <div class="section violations-section">
       <p class="section-title">
         <span class="title-left">Violation Items</span>
@@ -570,6 +577,9 @@
         <div class="kv"><span class="k">Hazardous Substance:</span><input class="f-input f-invHazsub" type="text"></div>
         <div class="kv"><span class="k">Fall Distance (ft):</span><input class="f-input f-invFallDistance" type="text"></div>
         <div class="kv"><span class="k">Fall Height (ft):</span><input class="f-input f-invFallHeight" type="text"></div>
+        <div class="kv"><span class="k">Construction Operation:</span><textarea class="f-input f-invConstOp" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Construction Cause of Injury:</span><textarea class="f-input f-invConstCause" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Cause of Fatality:</span><textarea class="f-input f-invFatCause" rows="1"></textarea></div>
       </div>
 
       <div class="inv-keywords-row">
@@ -1043,6 +1053,7 @@
     setField(d.querySelector('.f-ownerType'), rec.ownerType);
     setField(d.querySelector('.f-migrant'), rec.migrant);
     setField(d.querySelector('.f-planningGuides'), rec.planningGuides);
+    setField(d.querySelector('.f-emphasis'), rec.emphasisPrograms);
 
     (rec.violationItems || []).forEach(item => {
       const block = addCitationBlock(d);
@@ -1092,6 +1103,9 @@
         setField(d.querySelector('.f-invHazsub'), first.hazardousSubstance);
         setField(d.querySelector('.f-invFallDistance'), first.fallDistance);
         setField(d.querySelector('.f-invFallHeight'), first.fallHeight);
+        setField(d.querySelector('.f-invConstOp'), first.constructionOperation);
+        setField(d.querySelector('.f-invConstCause'), first.constructionCause);
+        setField(d.querySelector('.f-invFatCause'), first.fatalityCause);
       }
     }
 
@@ -1119,6 +1133,11 @@
     detailEl.querySelectorAll('.info-cell').forEach(cell => {
       const fields = cell.querySelectorAll('input, textarea');
       cell.classList.toggle('is-empty', ![...fields].some(filled));
+    });
+    // an entire row with nothing in it collapses, rather than leaving a bare border
+    detailEl.querySelectorAll('.info-grid').forEach(grid => {
+      const fields = grid.querySelectorAll('input, textarea');
+      grid.classList.toggle('is-empty', ![...fields].some(filled));
     });
     // whole panels disappear when nothing in them is filled
     detailEl.querySelectorAll('.cit-extra, .inv-detail-grid').forEach(panel => {
