@@ -256,23 +256,21 @@ async function searchInspections(env, { name, state, since, limit = 25 }) {
 }
 
 /**
- * DOL publishes the IMIS code tables alongside the data. Each row carries the
- * numeric code (accident_number) and its plain text (accident_value), so the
- * UI can show "Fracture" instead of 10. Cached hard at the edge: these change
- * about never.
+ * DOL serves every IMIS accident code list through one table,
+ * `accident_lookup2`: each row carries `accident_code` (which list it belongs
+ * to), `accident_number` (the code) and `accident_value` (its text).
+ *
+ * `OCC` is confirmed as Occupation. The remaining group names come from the
+ * live data: open /lookups on this Worker to list them, then set them here.
  */
-const LOOKUP_TABLES = {
-  nature: 'injury',          // nature_of_inj
-  bodyPart: 'body_part',     // part_of_body
-  source: 'injury_source',   // src_of_injury
-  eventType: 'event_type',   // event_type
-  human: 'human',            // hum_factor
-  environmental: 'environmental', // evn_factor
-  task: 'task',              // task_assigned
-  occupation: 'occupation',  // occ_code
-  degree: 'degree_injury',   // degree_of_inj
-  operation: 'operator',     // const_op and const_op_cause (code table OPER)
-  fatalCause: 'fatality'     // fat_cause (code table CAUS)
+const LOOKUP_TABLE = 'accident_lookup2';
+
+const CODE_GROUP = {
+  occupation: 'OCC',   // confirmed
+  nature: 'NAT',       // nature_of_inj
+  bodyPart: 'PRT',     // part_of_body
+  source: 'SRC',       // src_of_injury
+  eventType: 'EVT'     // event_type
 };
 
 const PROG_TYPE = {
@@ -416,20 +414,36 @@ const FAT_CAUSE = {
 };
 
 async function loadLookups(env) {
-  const names = Object.keys(LOOKUP_TABLES);
-  const results = await Promise.all(names.map(n =>
-    dol(env, LOOKUP_TABLES[n], null, { limit: 1000, cacheTtl: 604800 }).catch(() => [])
-  ));
-  const out = {};
-  names.forEach((n, i) => {
-    const m = new Map();
-    (results[i] || []).forEach(r => {
-      const code = r.accident_number ?? r.accident_code;
-      if (code !== undefined && code !== null) m.set(String(code).trim(), String(r.accident_value || '').trim());
-    });
-    out[n] = m;
+  const rows = await loadLookupRows(env);
+  const byGroup = new Map();
+  rows.forEach(r => {
+    const group = String(r.accident_code || '').trim().toUpperCase();
+    if (!group) return;
+    if (!byGroup.has(group)) byGroup.set(group, new Map());
+    const code = r.accident_number ?? r.accident_letter;
+    if (code === null || code === undefined) return;
+    byGroup.get(group).set(String(code).trim(), String(r.accident_value || '').trim());
   });
+
+  const out = {};
+  Object.keys(CODE_GROUP).forEach(name => {
+    out[name] = byGroup.get(CODE_GROUP[name]) || new Map();
+  });
+  out._groups = byGroup;   // kept for the /lookups diagnostic
   return out;
+}
+
+// The table is larger than one page, so walk it until a short page comes back.
+async function loadLookupRows(env) {
+  const all = [];
+  for (let page = 0; page < 40; page += 1) {
+    const batch = await dol(env, LOOKUP_TABLE, null, {
+      limit: 200, offset: page * 200, cacheTtl: 604800
+    }).catch(() => []);
+    all.push(...batch);
+    if (batch.length < 200) break;
+  }
+  return all;
 }
 
 // Plain text when we have it; otherwise the raw code, never a blank.
@@ -786,6 +800,26 @@ export default {
 
     const q = url.searchParams;
     try {
+      if (url.pathname === '/lookups') {
+        // Lists every code group in accident_lookup2 with its size and a sample,
+        // so CODE_GROUP can be set from the live data rather than guessed.
+        const lookups = await loadLookups(env);
+        const groups = [...lookups._groups.entries()]
+          .map(([code, values]) => {
+            const sample = [...values.entries()].slice(0, 3)
+              .map(([k, v]) => `${k} = ${v}`);
+            return { accident_code: code, codes: values.size, sample };
+          })
+          .sort((a, b) => b.codes - a.codes);
+        const mapped = Object.fromEntries(
+          Object.entries(CODE_GROUP).map(([field, code]) => [field, {
+            accident_code: code,
+            resolved: (lookups[field] && lookups[field].size) || 0
+          }])
+        );
+        return json({ groups, currentMapping: mapped }, request, env);
+      }
+
       if (url.pathname === '/search') {
         const rows = await searchInspections(env, {
           name: q.get('name'), state: q.get('state'), since: q.get('since'),
