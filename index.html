@@ -50,7 +50,7 @@
   }
   .qrow-body { border-top: 1px solid var(--line); padding: 10px 16px 14px; }
   .qrow-body textarea {
-    width: 100%; min-height: 56px; resize: none; overflow: hidden; font-family: var(--sans); font-size: 12.5px;
+    width: 100%; min-height: 40px; resize: none; overflow: hidden; font-family: var(--sans); font-size: 12.5px;
     color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 3px; padding: 9px 10px;
   }
   .qrow-body textarea::placeholder { color: var(--ink-faint); }
@@ -75,12 +75,12 @@
   #estabName { flex: 1 1 260px; min-width: 180px; }
   .case-counts { display: flex; gap: 18px; align-items: baseline; margin-top: 16px; font-size: 12.5px; color: var(--ink-soft); }
   .case-count .n { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--ink); margin-right: 4px; }
-  .citations-list { display: flex; flex-direction: column; gap: 12px; }
-  .citation-block { border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; background: var(--bg); }
+  .citations-list { display: flex; flex-direction: column; gap: 8px; }
+  .citation-block { border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; background: var(--bg); }
   .citation-block .viol-table thead th[data-csort] { cursor: pointer; user-select: none; }
   .citation-block .viol-table thead th[data-csort]:hover { color: var(--ink); background: var(--select-bg); }
   .citation-block tbody tr.citations-row td { border-bottom: none; }
-  .inv-meta-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 12px; margin-bottom: 10px; }
+  .inv-meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 10px; margin-bottom: 8px; }
   .inv-meta-grid .kv { margin: 0; }
   .inv-meta-grid .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
   .empty-toggle { font-size: 12px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
@@ -114,7 +114,7 @@
   }
   .tip-menu-btn:hover, .tip-menu:focus-within .tip-menu-btn { background: var(--badge-bg); color: var(--badge-ink); border-color: var(--badge-bg); }
   .tip-menu-panel {
-    position: absolute; right: 0; top: calc(100% + 10px); width: 920px; max-width: 94vw; max-height: 82vh; overflow-y: auto; z-index: 60;
+    position: absolute; right: 0; top: calc(100% + 10px); width: 1040px; max-width: 95vw; max-height: 84vh; overflow-y: auto; z-index: 60;
     background: var(--bg); border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,0.14);
     padding: 14px 16px; opacity: 0; visibility: hidden; transition: opacity 0.12s ease 0.25s, visibility 0s linear 0.37s;
   }
@@ -124,9 +124,10 @@
     transition: opacity 0.12s ease 0.08s, visibility 0s;
   }
   /* two columns so the guide fits without scrolling */
-  .tip-menu-panel dl { columns: 2; column-gap: 28px; }
+  .tip-menu-panel dl { columns: 3; column-gap: 24px; }
   .tip-menu-panel dt { break-after: avoid; }
   .tip-menu-panel dd { break-before: avoid; break-inside: avoid; margin-bottom: 2px; }
+  @media (max-width: 1100px) { .tip-menu-panel dl { columns: 2; } }
   @media (max-width: 720px) { .tip-menu-panel dl { columns: 1; } }
   .tip-menu:hover .tip-menu-panel, .tip-menu:focus-within .tip-menu-panel, .tip-menu.open .tip-menu-panel { opacity: 1; visibility: visible; }
   .tip-menu-title { margin: 0 0 8px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
@@ -153,7 +154,7 @@
   /* ---- generic inline editable field ---- */
   .f-input {
     font-family: var(--sans); font-size: 12.5px; color: var(--ink); background: var(--bg-sunken);
-    border: 1px solid var(--line-strong); border-radius: 3px; padding: 5px 7px; width: 100%;
+    border: 1px solid var(--line-strong); border-radius: 3px; padding: 3px 6px; width: 100%;
   }
   .f-input:focus { outline: 2px solid var(--focus); outline-offset: 1px; background: var(--bg); }
   .f-input.f-num { font-family: var(--mono); text-align: right; }
@@ -162,13 +163,13 @@
   .f-money-wrap { display: inline-flex; align-items: center; gap: 3px; }
   .f-money-wrap .sign { color: var(--ink-faint); font-family: var(--mono); font-size: 11.5px; }
   .f-readonly { background: var(--select-bg); color: var(--ink-soft); }
-  textarea.f-input { resize: none; overflow: hidden; min-height: 44px; }
+  textarea.f-input { resize: none; overflow: hidden; min-height: 0; }
 
   /* ---- aggregate summary strip ---- */
   .section-heading { font-size: 13px; font-weight: 700; color: var(--ink); margin: 18px 0 10px; }
   .agg-strip { display: none; margin-bottom: 16px; border: 1px solid var(--line); }
   .agg-strip.visible { display: grid; grid-template-columns: repeat(8, 1fr); }
-  .agg-tile { background: var(--bg); padding: 10px 10px; text-align: center; border-right: 1px solid var(--line); }
+  .agg-tile { background: var(--bg); padding: 7px 8px; text-align: center; border-right: 1px solid var(--line); }
   .agg-tile:last-child { border-right: none; }
   .agg-tile .n { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--ink); }
   .agg-tile .l { font-size: 10.5px; color: var(--ink-soft); margin-top: 2px; }
@@ -188,7 +189,7 @@
     border-bottom: 1px solid var(--line-strong); padding: 8px 8px; text-align: left; white-space: normal;
   }
   table.inspections-table thead th.num { text-align: right; }
-  table.inspections-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+  table.inspections-table td { padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
   table.inspections-table tr.insp-detail-row > td { overflow: visible; white-space: normal; }
   /* fixed column widths for the results tables (live + deleted) */
   table.inspections-table thead th:nth-child(1) { width: 52px; }
@@ -223,17 +224,20 @@
   table.inspections-table td.last-run { font-family: var(--mono); font-size: 10.5px; color: var(--ink-soft); white-space: normal; }
 
   .info-grid { display: grid; border-bottom: 1px solid var(--line); }
+  /* fields pack into the width available; hidden empties leave no gaps */
+  .info-grid.auto { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0; }
+  .info-grid.auto .info-cell.span-2 { grid-column: span 2; }
+  @media (max-width: 900px) { .info-grid.auto { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
   .info-grid.cols-3 { grid-template-columns: 1.3fr 1fr 1fr; }
   .info-grid.cols-2 { grid-template-columns: 1fr 1fr; }
   .info-grid.cols-3-even { grid-template-columns: repeat(3, 1fr); }
   .info-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
   .info-grid.cols-addr { grid-template-columns: 1.6fr 1.6fr 1fr; }
-  .info-cell { padding: 8px 12px; border-right: 1px solid var(--line); font-size: 12.5px; }
+  .info-cell { padding: 5px 10px; border-right: 1px solid var(--line); font-size: 12.5px; }
   .info-cell:last-child { border-right: none; }
-  .info-cell .kv { margin-bottom: 6px; }
+  .info-cell .kv { margin-bottom: 4px; }
   .info-cell .kv:last-child { margin-bottom: 0; }
-  .info-cell .k { font-weight: 700; color: var(--ink); display: block; margin-bottom: 3px; }
-  .info-cell .addr-label { font-weight: 700; margin-bottom: 4px; }
+  .info-cell .k { font-weight: 700; color: var(--ink-soft); display: block; font-size: 10.5px; margin-bottom: 1px; }
 
   .row-link { color: var(--link); text-decoration: none; font-weight: 600; }
 
@@ -248,13 +252,13 @@
   tr.citations-row.accident-related td { background: var(--danger-bg); }
   tr.citations-row .row-num { white-space: nowrap; }
   .cit-flag { display: block; width: fit-content; font-size: 9px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 1px 4px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.02em; white-space: nowrap; }
-  .cit-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; margin-top: 6px; }
+  .cit-extra { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 10px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; margin-top: 4px; }
   .cit-extra .kv { margin: 0; }
   .cit-extra .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
   .record-detail .cit-extra .f-input { width: 100%; font-size: 11.5px; background: var(--bg); }
   .record-detail td textarea.f-stdDefinition { flex: 1 1 auto; min-height: 0; display: block; font-size: 12px; }
 
-  .investigation-summary { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .investigation-summary { padding: 8px 12px; border-bottom: 1px solid var(--line); }
   .inv-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .inv-title { font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; }
   .inv-meta-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; font-size: 12.5px; margin-bottom: 10px; }
@@ -263,17 +267,17 @@
   .inv-narrative-row { margin-bottom: 10px; }
   .inv-keywords-row { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin-top: 12px; }
   .inv-keywords-row .k { font-weight: 700; color: var(--ink); }
-  .inv-subheading { font-size: 12.5px; font-weight: 700; color: var(--ink); margin: 0 0 8px; }
-  .inv-detail-heading { margin-top: 12px; }
-  .inv-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; }
+  .inv-subheading { font-size: 12px; font-weight: 700; color: var(--ink); margin: 0 0 5px; }
+  .inv-detail-heading { margin-top: 8px; }
+  .inv-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 10px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; }
   .inv-detail-grid .kv { margin: 0; }
   .inv-detail-grid .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
   .inv-detail-grid .f-input { background: var(--bg); font-size: 11.5px; }
   .inv-detail-grid textarea.f-input, .info-cell textarea.f-input { min-height: 0; display: block; }
 
-  .section { padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .section { padding: 8px 12px; border-bottom: 1px solid var(--line); }
   .section:last-child { border-bottom: none; }
-  .section-title { font-size: 11.5px; font-weight: 700; color: var(--ink); margin: 0 0 8px; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+  .section-title { font-size: 11.5px; font-weight: 700; color: var(--ink); margin: 0 0 5px; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
   .section-title .tag {
     font-size: 9.5px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg);
     padding: 1px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em;
@@ -287,7 +291,7 @@
   .record-detail td .f-input { padding: 5px 3px 5px 5px; font-size: 11.5px; }
   .record-detail .f-money-wrap { display: flex; width: 100%; }
   .record-detail .f-money-wrap .f-input { flex: 1 1 auto; min-width: 0; }
-  th, td { padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--line); }
+  th, td { padding: 4px 4px; text-align: left; border-bottom: 1px solid var(--line); }
   thead th { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); border-bottom: 1px solid var(--line-strong); white-space: normal; vertical-align: bottom; }
   td.num, th.num { font-family: var(--mono); text-align: right; }
   tbody tr:last-child td { border-bottom: none; }
@@ -368,40 +372,36 @@
       <div class="tip-menu-panel" role="menu">
         <p class="tip-menu-title">Field guide</p>
         <dl>
-          <dt>Manual Search</dt><dd>Searches OSHA by establishment name across the last five calendar years. Partial names work.</dd>
-          <dt>Underwriter Notes</dt><dd>Record your notes on any Serious, Willful, Repeat, and FAT/CAT's. Detail information from agent's or loss control.</dd>
-          <dt>Five Year History</dt><dd>Citation counts and penalty totals across all inspections shown. Deleted inspections are excluded.</dd>
-          <dt>Open / closed counts</dt><dd>An inspection with no close date is still open.</dd>
-          <dt>Show empty fields</dt><dd>Fields OSHA returned blank are hidden. Tick this to see them all, for manual entry.</dd>
-
-          <dt>Inspection row</dt><dd>Activity number, dates, state, citation counts and establishment name. Click the arrow to open the full record; click a column heading to sort.</dd>
-          <dt>Current Penalty Total</dt><dd>The inspection's current penalties, added up from its citations. Updates as citation penalties are edited.</dd>
-          <dt>FAT/CAT</dt><dd>Fatality or catastrophe inspection. Citations tied to the accident sort to the top and carry the same marker.</dd>
-          <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
-          <dt>Inspection Type / Scope / Safety-Health</dt><dd>Why the inspection happened, how much of the site it covered, and whether it was a safety or health inspection.</dd>
-          <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount at the site, private or government employer, whether migrant labor was involved, and whether the workforce was represented.</dd>
-          <dt>Why No Inspection</dt><dd>Where OSHA opened a case but did not inspect, the reason: out of business, denied entry, too few employees, and so on.</dd>
-          <dt>Emphasis Programs</dt><dd>National or local emphasis programs the inspection fell under, such as a fall-hazard or heat NEP. A targeted inspection rather than a random one.</dd>
-          <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and by industry.</dd>
-
-          <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other. Current and initial penalties roll up into Five Year History.</dd>
-          <dt>Initial vs Current Citation Type</dt><dd>What the citation was first issued as, and what it stands at now after any settlement or appeal.</dd>
-          <dt>Standard Cited</dt><dd>The OSHA standard behind the citation; the line underneath carries its text.</dd>
-          <dt>Issuance / Abatement Due / Contest Date</dt><dd>When it was issued, when the hazard had to be fixed, and the date the employer contested it, if they did.</dd>
-          <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
-          <dt>Latest Event</dt><dd>The most recent action on the citation, such as an informal or formal settlement.</dd>
           <dt>Abatement Complete / FTA Penalty</dt><dd>Whether the hazard was fixed and how it was resolved if not. FTA = Penalty for Failure to Abate.</dd>
+          <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
+          <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, and how far the worker fell.</dd>
+          <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
+          <dt>Current Penalty Total</dt><dd>The inspection's current penalties, added up from its citations. Updates as citation penalties are edited.</dd>
+          <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
+          <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
+          <dt>Emphasis Programs</dt><dd>National or local emphasis programs the inspection fell under, such as a fall-hazard or heat NEP. A targeted inspection rather than a random one.</dd>
+          <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount at the site, private or government employer, whether migrant labor was involved, and whether the workforce was represented.</dd>
+          <dt>FAT/CAT</dt><dd>Fatality or catastrophe inspection. Citations tied to the accident sort to the top and carry the same marker.</dd>
           <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
+          <dt>Five Year History</dt><dd>Citation counts and penalty totals across all inspections shown. Deleted inspections are excluded.</dd>
           <dt>Gravity</dt><dd>OSHA's severity score for a serious violation, 1 to 10. Higher means a more severe hazard.</dd>
           <dt>Hazard Category / Hazardous Substances / Emphasis Program</dt><dd>The hazard involved, any substance codes recorded, and whether it fell under an emphasis program.</dd>
-
-          <dt>Investigation Summary</dt><dd>Appears for accident inspections: the incident narrative, event date and time, and the injured worker's details.</dd>
-          <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
+          <dt>Initial vs Current Citation Type</dt><dd>What the citation was first issued as, and what it stands at now after any settlement or appeal.</dd>
           <dt>Injury Detail</dt><dd>Part of body, source, event type, human and environmental factors, fall distances and any substance involved.</dd>
-          <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, and how far the worker fell.</dd>
+          <dt>Inspection row</dt><dd>Activity number, dates, state, citation counts and establishment name. Click the arrow to open the full record; click a column heading to sort.</dd>
+          <dt>Inspection Type / Scope / Safety-Health</dt><dd>Why the inspection happened, how much of the site it covered, and whether it was a safety or health inspection.</dd>
+          <dt>Investigation Summary</dt><dd>Appears for accident inspections: the incident narrative, event date and time, and the injured worker's details.</dd>
+          <dt>Issuance / Abatement Due / Contest Date</dt><dd>When it was issued, when the hazard had to be fixed, and the date the employer contested it, if they did.</dd>
           <dt>Keywords</dt><dd>OSHA's own keywords for the incident.</dd>
-
-          <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
+          <dt>Latest Event</dt><dd>The most recent action on the citation, such as an informal or formal settlement.</dd>
+          <dt>Manual Search</dt><dd>Searches OSHA by establishment name across the last five calendar years. Partial names work.</dd>
+          <dt>Open / closed counts</dt><dd>An inspection with no close date is still open.</dd>
+          <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and by industry.</dd>
+          <dt>Show empty fields</dt><dd>Fields OSHA returned blank are hidden. Tick this to see them all, for manual entry.</dd>
+          <dt>Standard Cited</dt><dd>The OSHA standard behind the citation; the line underneath carries its text.</dd>
+          <dt>Underwriter Notes</dt><dd>Record your notes on any Serious, Willful, Repeat, and FAT/CAT's. Detail information from agent's or loss control.</dd>
+          <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other. Current and initial penalties roll up into Five Year History.</dd>
+          <dt>Why No Inspection</dt><dd>Where OSHA opened a case but did not inspect, the reason: out of business, denied entry, too few employees, and so on.</dd>
         </dl>
       </div>
     </div>
@@ -515,38 +515,25 @@
 
 <template id="recordDetailTemplate">
   <div class="record-detail">
-    <div class="info-grid cols-addr">
-      <div class="info-cell">
-        <div class="addr-label">Site Address:</div>
-        <textarea class="f-input f-siteAddress" rows="3" placeholder="Company name&#10;Street&#10;City, State ZIP"></textarea>
+    <div class="info-grid auto">
+      <div class="info-cell span-2">
+        <div class="kv"><span class="k">Site Address:</span><textarea class="f-input f-siteAddress" rows="1" placeholder="Company name&#10;Street&#10;City, State ZIP"></textarea></div>
       </div>
-      <div class="info-cell">
-        <div class="addr-label">Mailing Address:</div>
-        <textarea class="f-input f-mailingAddress" rows="3"></textarea>
+      <div class="info-cell span-2">
+        <div class="kv"><span class="k">Mailing Address:</span><textarea class="f-input f-mailingAddress" rows="1"></textarea></div>
       </div>
-      <div class="info-cell">
-        <div class="kv"><span class="k">NAICS:</span><input class="f-input f-naics" type="text"></div>
-        <div class="kv"><span class="k">Advanced Notice:</span><input class="f-input f-advancedNotice" type="text"></div>
-      </div>
-    </div>
-
-    <div class="info-grid cols-3-even">
+      <div class="info-cell"><div class="kv"><span class="k">NAICS:</span><input class="f-input f-naics" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Advanced Notice:</span><input class="f-input f-advancedNotice" type="text"></div></div>
       <div class="info-cell"><div class="kv"><span class="k">Inspection Type:</span><input class="f-input f-inspectionType" type="text"></div></div>
       <div class="info-cell"><div class="kv"><span class="k">Scope:</span><input class="f-input f-scope" type="text"></div></div>
       <div class="info-cell"><div class="kv"><span class="k">Safety/Health:</span><input class="f-input f-safetyHealth" type="text"></div></div>
-    </div>
-
-    <div class="info-grid cols-4">
       <div class="info-cell"><div class="kv"><span class="k">Employees:</span><input class="f-input f-employees" type="text"></div></div>
       <div class="info-cell"><div class="kv"><span class="k">Owner Type:</span><input class="f-input f-ownerType" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Migrant Labor:</span><input class="f-input f-migrant" type="text"></div>
-        <div class="kv"><span class="k">Union Status:</span><input class="f-input f-unionStatus" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Planning Guides:</span><input class="f-input f-planningGuides" type="text"></div></div>
-    </div>
-
-    <div class="info-grid">
-      <div class="info-cell"><div class="kv"><span class="k">Emphasis Programs:</span><textarea class="f-input f-emphasis" rows="1"></textarea></div>
-        <div class="kv"><span class="k">Why No Inspection:</span><input class="f-input f-whyNoInspection" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Union Status:</span><input class="f-input f-unionStatus" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Migrant Labor:</span><input class="f-input f-migrant" type="text"></div></div>
+      <div class="info-cell span-2"><div class="kv"><span class="k">Planning Guides:</span><input class="f-input f-planningGuides" type="text"></div></div>
+      <div class="info-cell span-2"><div class="kv"><span class="k">Emphasis Programs:</span><textarea class="f-input f-emphasis" rows="1"></textarea></div></div>
+      <div class="info-cell span-2"><div class="kv"><span class="k">Why No Inspection:</span><input class="f-input f-whyNoInspection" type="text"></div></div>
     </div>
 
     <div class="section violations-section">
@@ -1141,7 +1128,7 @@
     };
 
     // ".keep" fields always show, blank or not.
-    detailEl.querySelectorAll('.info-cell .kv, .cit-extra .kv, .inv-detail-grid .kv').forEach(kv => {
+    detailEl.querySelectorAll('.info-cell .kv, .cit-extra .kv, .inv-detail-grid .kv, .inv-meta-grid .kv').forEach(kv => {
       if (kv.classList.contains('keep')) return;
       kv.classList.toggle('is-empty', !filled(kv.querySelector('input, textarea')));
     });
