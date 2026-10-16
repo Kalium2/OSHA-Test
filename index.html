@@ -242,12 +242,6 @@
 
   tr.citations-row > td { border-bottom: none; }
   tr.citation-def-row > td { padding-top: 0; padding-bottom: 8px; }
-  .rel-act-cell { display: flex; align-items: center; gap: 6px; }
-  .rel-act-cell .f-input { flex: 1 1 auto; min-width: 0; }
-  .btn-link-sm { background: none; border: none; color: var(--link); font-size: 11.5px; font-weight: 600; cursor: pointer; padding: 2px 3px; text-decoration: none; white-space: nowrap; }
-  .btn-link-sm:hover { text-decoration: underline; }
-  .btn-link-sm[hidden] { display: none; }
-  tr.insp-row.flash-target > td { background: var(--danger-bg); transition: background 1.2s ease; }
   .cit-def { display: flex; align-items: flex-start; gap: 8px; }
   tr.citations-row.accident-related td { background: var(--danger-bg); }
   tr.citations-row .row-num { white-space: nowrap; }
@@ -393,8 +387,6 @@
           <dt>Abatement Complete / FTA Penalty</dt><dd>Whether the hazard was fixed and how it was resolved if not. FTA = Penalty for Failure to Abate.</dd>
           <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
           <dt>Hazard Category / Hazardous Substances / Emphasis Program</dt><dd>The hazard involved, any substance codes recorded, and whether it fell under an emphasis program.</dd>
-
-          <dt>Related Activity</dt><dd>Other complaints, referrals, accidents or inspections linked to this one, flagged as safety or health.</dd>
 
           <dt>Investigation Summary</dt><dd>Appears for accident inspections: the incident narrative, event date and time, and the injured worker's details.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
@@ -550,24 +542,6 @@
       <div class="no-citations">No citations yet — click "+ Add citation" to add one.</div>
     </div>
 
-    <div class="section related-section">
-      <p class="section-title"><span class="title-left">Related Activity</span></p>
-      <div class="table-scroll">
-        <table class="related-table">
-          <colgroup><col style="width:20%"><col style="width:20%"><col style="width:15%"><col style="width:15%"></colgroup>
-          <thead>
-            <tr>
-              <th>Activity #</th>
-              <th>Type</th>
-              <th>Safety</th>
-              <th>Health</th>
-            </tr>
-          </thead>
-          <tbody class="related-body"></tbody>
-        </table>
-      </div>
-    </div>
-
     <div class="investigation-summary">
       <div class="inv-head">
         <h3 class="inv-title">Investigation Summary</h3>
@@ -663,19 +637,6 @@
   </div>
 </template>
 
-<template id="relatedRowTemplate">
-  <tr class="related-row">
-    <td class="rel-act-cell">
-      <input class="f-input f-sm" type="text" data-rel="activityNr">
-      <button class="btn-link-sm" data-action="open-related" type="button" title="Load this inspection">Open</button>
-      <a class="btn-link-sm osha-out" target="_blank" rel="noopener noreferrer" title="View on osha.gov">↗</a>
-    </td>
-    <td><input class="f-input f-sm" type="text" data-rel="type"></td>
-    <td><input class="f-input f-sm" type="text" data-rel="safety"></td>
-    <td><input class="f-input f-sm" type="text" data-rel="health"></td>
-  </tr>
-</template>
-
 <div class="modal-overlay" id="deleteModalOverlay" style="display:none;">
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
     <h3 id="deleteModalTitle">Delete inspection record?</h3>
@@ -698,7 +659,6 @@
   const aggStrip = document.getElementById('aggStrip');
   const detailTmpl = document.getElementById('recordDetailTemplate');
   const citationBlockTmpl = document.getElementById('citationBlockTemplate');
-  const relatedRowTmpl = document.getElementById('relatedRowTemplate');
   const deletedBody = document.getElementById('deletedBody');
   const deletedTableWrap = document.getElementById('deletedTableWrap');
   const deletedEmptyMsg = document.getElementById('deletedEmptyMsg');
@@ -1104,18 +1064,9 @@
       block.querySelectorAll('.contest-col').forEach(el => el.classList.toggle('is-empty', !show));
     });
 
-    const relatedBody = d.querySelector('.related-body');
-    (rec.relatedActivity || []).forEach(rel => {
-      const row = relatedRowTmpl.content.cloneNode(true).querySelector('tr');
-      Object.keys(rel).forEach(k => setField(row.querySelector(`[data-rel="${k}"]`), rel[k]));
-      wireRelatedRow(row, rel);
-      relatedBody.appendChild(row);
-    });
-
     // Sections only appear when the inspection actually has that data.
     const hasViolations = (rec.violationItems || []).length > 0;
     d.querySelector('.violations-section').style.display = hasViolations ? '' : 'none';
-    d.querySelector('.related-section').style.display = (rec.relatedActivity || []).length ? '' : 'none';
 
     const inv = rec.investigation;
     d.querySelector('.investigation-summary').style.display = inv ? '' : 'none';
@@ -1146,61 +1097,6 @@
 
     hideEmptyFields(d);
     applyApiData(summaryRow, { fatCat: rec.fatCat });
-  }
-
-  // Related activity: jump to the inspection if it is already on the page,
-  // otherwise pull it from OSHA and add it to the table.
-  function findLoadedRow(activityNr) {
-    return [...recordsBody.querySelectorAll('tr.insp-row')]
-      .find(r => (r.querySelector('.activity-link').value || '').trim() === String(activityNr).trim());
-  }
-
-  function revealRow(row) {
-    const detail = row.nextElementSibling;
-    if (detail && detail.classList.contains('hidden')) {
-      detail.classList.remove('hidden');
-      row.classList.add('expanded');
-    }
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    row.classList.add('flash-target');
-    setTimeout(() => row.classList.remove('flash-target'), 1600);
-  }
-
-  function wireRelatedRow(row, rel) {
-    const nr = String(rel.activityNr || '').trim();
-    const openBtn = row.querySelector('[data-action="open-related"]');
-    const oshaLink = row.querySelector('.osha-out');
-
-    // Only inspections and accident inspections have a public OSHA page;
-    // complaints and referrals are not published individually.
-    const isInspection = ['Inspection', 'Accident'].includes(rel.type);
-    if (nr && isInspection) {
-      oshaLink.href = `https://www.osha.gov/ords/imis/establishment.inspection_detail?id=${encodeURIComponent(nr)}`;
-    } else {
-      oshaLink.hidden = true;
-    }
-    if (!nr) { openBtn.hidden = true; return; }
-
-    openBtn.addEventListener('click', async () => {
-      const existing = findLoadedRow(nr);
-      if (existing) { revealRow(existing); setStatus(`Inspection ${nr} is already in the list.`); return; }
-
-      openBtn.disabled = true;
-      setStatus(`Loading inspection ${nr}…`);
-      try {
-        const res = await fetch(`${API.base}/inspection?activity=${encodeURIComponent(nr)}`);
-        if (res.status === 404) throw new Error('no inspection record (complaints and referrals are not published individually)');
-        const body = await readJson(res);
-        if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-        const newRow = addRecord();
-        fillRecord(newRow, Array.isArray(body) ? body[0] : body);
-        revealRow(newRow);
-        setStatus(`Added inspection ${nr} from related activity.`);
-      } catch (err) {
-        setStatus(`Could not load ${nr}: ${err.message}`, true);
-      }
-      openBtn.disabled = false;
-    });
   }
 
   // Fields with no data are hidden; the "Show empty fields" switch brings them back.
