@@ -381,7 +381,7 @@
         <dl>
           <dt>Abatement Complete / FTA Penalty</dt><dd>Whether the hazard was fixed and how it was resolved if not. FTA = Penalty for Failure to Abate.</dd>
           <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
-          <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, and how far the worker fell.</dd>
+          <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, how far the worker fell, and the project itself — type, cost band, end use and number of stories. The project detail gives a sense of the scale of work the employer takes on.</dd>
           <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
           <dt>Current Penalty Total</dt><dd>The inspection's current penalties, added up from its citations. Updates as citation penalties are edited.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
@@ -583,6 +583,10 @@
         <div class="kv"><span class="k">Construction Operation:</span><textarea class="f-input f-invConstOp" rows="1"></textarea></div>
         <div class="kv"><span class="k">Construction Cause of Injury:</span><textarea class="f-input f-invConstCause" rows="1"></textarea></div>
         <div class="kv"><span class="k">Cause of Fatality:</span><textarea class="f-input f-invFatCause" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Project Type:</span><input class="f-input f-invProjectType" type="text"></div>
+        <div class="kv"><span class="k">Project Cost:</span><input class="f-input f-invProjectCost" type="text"></div>
+        <div class="kv"><span class="k">Construction End Use:</span><input class="f-input f-invEndUse" type="text"></div>
+        <div class="kv"><span class="k">Building Stories:</span><input class="f-input f-invStories" type="text"></div>
       </div>
 
       <div class="inv-keywords-row">
@@ -1092,6 +1096,10 @@
       setField(d.querySelector('.f-invNr'), inv.investigationNr);
       setField(d.querySelector('.f-invEvent'), inv.event);
       setField(d.querySelector('.f-invEventTime'), inv.eventTime);
+      setField(d.querySelector('.f-invProjectType'), inv.projectType);
+      setField(d.querySelector('.f-invProjectCost'), inv.projectCost);
+      setField(d.querySelector('.f-invEndUse'), inv.constructionEndUse);
+      setField(d.querySelector('.f-invStories'), inv.buildingStories);
       setField(d.querySelector('.f-invNarrative'), inv.narrative);
       setField(d.querySelector('.f-invKeywords'), inv.keywords);
       const first = (inv.injured || [])[0];
