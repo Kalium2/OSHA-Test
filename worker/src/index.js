@@ -18,33 +18,190 @@
 
 const BASE = 'https://apiprod.dol.gov/v4/get/OSHA';
 
-// ---------- code tables (DOL publishes codes, not labels) ----------
+/**
+ * OSHA code dictionary, generated from the DOL data dictionary (OSHA_Meta_Data).
+ * Every entry is a published value list. Codes not listed here come from DOL's
+ * own lookup datasets at runtime; see loadLookups().
+ */
+
 const INSP_TYPE = {
-  A: 'Accident', B: 'Complaint', C: 'Referral', D: 'Monitoring', E: 'Variance',
-  F: 'Follow-up', G: 'Unprogrammed related', H: 'Planned', I: 'Programmed related',
-  J: 'Unprogrammed other', K: 'Programmed other', L: 'Other'
+  A: "Accident",
+  B: "Complaint",
+  C: "Referral",
+  D: "Monitoring",
+  E: "Variance",
+  F: "FollowUp",
+  G: "Unprog Rel",
+  H: "Planned",
+  I: "Prog Related",
+  J: "Unprog Other",
+  K: "Prog Other",
+  L: "Other-L",
+  M: "Fat/Cat",
 };
-const INSP_SCOPE = { A: 'Complete', B: 'Partial', C: 'Records only', D: 'No inspection' };
-const SAFETY_HLTH = { S: 'Safety', H: 'Health' };
-const VIOL_TYPE = { S: 'Serious', W: 'Willful', R: 'Repeat', O: 'Other', U: 'Unclassified' };
-const DEGREE_OF_INJ = { 1: 'Fatality', 2: 'Hospitalized injury', 3: 'Non-hospitalized injury' };
-const OWNER_TYPE = { A: 'Private', B: 'Local government', C: 'State government', D: 'Federal' };
+
+const INSP_SCOPE = {
+  A: "Complete",
+  B: "Partial",
+  C: "Records",
+  D: "NoInspection",
+};
+
+const SAFETY_HLTH = {
+  H: "health",
+  S: "safety",
+};
+
+const OWNER_TYPE = {
+  A: "Private",
+  B: "LocalGovt",
+  C: "StateGovt",
+  D: "Federal",
+};
+
+const WHY_NO_INSP = {
+  A: "No Insp/Not Found",
+  B: "No Insp/Out of Business",
+  C: "No Insp/Process Inactive",
+  D: "No Insp/10 or Fewer Empe",
+  E: "No Insp/Denied Entry",
+  F: "No Insp/SIC not on PG",
+  G: "No Insp/Exempt Voluntary",
+  H: "No Insp/NonExempt Consult",
+  I: "No Insp/Other",
+  J: "No Insp/Employer Exempted By Appropriation Act",
+};
+
+const UNION_STATUS = {
+  Y: "Yes",
+  U: "Yes",
+  A: "Yes",
+  N: "No",
+  B: "No",
+};
+
+const ADV_NOTICE = {
+  Y: "Yes",
+  N: "No",
+};
+
+const VIOL_TYPE = {
+  S: "Serious",
+  W: "Willful",
+  R: "Repeat",
+  O: "Other",
+  U: "Unclassified",
+};
+
 const ABATE_COMPLETE = {
-  Q: 'Quick Fix', 1: 'Quick Fix',
-  X: 'Abatement Completed', 2: 'Abatement Completed',
-  I: 'Corrected During Inspection', 3: 'Corrected During Inspection',
-  E: 'Not Completed - Employer out of business', 4: 'Not Completed - Employer out of business',
-  W: 'Not Completed - Worksite changed', 5: 'Not Completed - Worksite changed',
-  S: 'Not Completed - Solicitor advised', 6: 'Not Completed - Solicitor advised',
-  A: 'Not completed - AD discretion', 7: 'Not completed - AD discretion'
+  Q: "Quick Fix",
+  '1': "Quick Fix",
+  X: "Abatement Completed",
+  '2': "Abatement Completed",
+  I: "Corrected During Inspection",
+  '3': "Corrected During Inspection",
+  E: "Not Completed - Employer out of business",
+  '4': "Not Completed - Employer out of business",
+  W: "Not Completed - Worksite changed",
+  '5': "Not Completed - Worksite changed",
+  S: "Not Completed - Solicitor advised",
+  '6': "Not Completed - Solicitor advised",
+  A: "Not completed - AD discretion",
+  '7': "Not completed - AD discretion",
 };
-const REC = { A: 'Accident', C: 'Complaint', I: 'Imminent danger', R: 'Referral', V: 'Variance' };
-const TASK_ASSIGNED = { 1: 'Regularly assigned', 2: 'Not regularly assigned' };
+
+const REC = {
+  A: "Accident",
+  C: "Complaint",
+  I: "Imminent Danger",
+  R: "Referral",
+  V: "Variance",
+};
+
 const HIST_EVENT = {
-  Z: 'Issued', P: 'Petition to modify abatement', I: 'Informal settlement', A: 'Amendment',
-  W: 'Employer withdrew', D: 'Government dismissed', L: 'State settlement', Y: 'State decision',
-  F: 'Formal settlement', J: 'ALJ decision', R: 'Review Commission',
-  1: 'State lower court', 2: 'Appeals court', 3: 'Supreme Court'
+  Z: "Issued",
+  P: "Petition to Mod Abatement",
+  I: "Informal Settlement",
+  A: "Amendment",
+  W: "Empr Withdrew",
+  D: "Govt Dismissed",
+  L: "State Settlement",
+  Y: "State Decision",
+  F: "Formal Settlement",
+  J: "ALJ Decision",
+  R: "Review Commission",
+  '1': "State Lower Court",
+  '2': "Appeals Court",
+  '3': "Supreme Court",
+  C: "Contested",
+  B: "Modified - Abatement Credit",
+  O: "Administrative Law Judge Order",
+  Q: "National Office Adjustment",
+};
+
+const PEN_FTA = {
+  P: "Penalty",
+  F: "FTA",
+};
+
+const SEX = {
+  M: "Male",
+  F: "Female",
+};
+
+const DEGREE_OF_INJ = {
+  '1': "Fatality",
+  '2': "Hospitalized injuries",
+  '3': "No Hospitalized injuries",
+};
+
+const TASK_ASSIGNED = {
+  '1': "Task regularly assigned",
+  '2': "Task not regularly assigned",
+};
+
+const HUM_FACTOR = {
+  '1': "Misjudgment, haz. situation",
+  '2': "No personal protective eq used",
+  '3': "No appropr protective clothing",
+  '4': "Malfunc in securing/warning op",
+  '5': "Distracting actions by others",
+  '6': "Equip. inappropr for operation",
+  '7': "Malfunc, neuromuscular system",
+  '8': "Perception malfunc,task-envir.",
+  '9': "Safety devices removed/inoper.",
+  '10': "Position inapropriate for task",
+  '11': "Mater-handlg proced. inappropr",
+  '12': "Defective equipment in use",
+  '13': "Lockout/tagout proced malfunc",
+  '14': "Other",
+  '15': "Insuff/lack/housekeeping program",
+  '16': "Insuff/lack/expos/biologcl mntrg.",
+  '17': "Insuff/lack/engineerng controls",
+  '18': "Insuff/lack/writn wrk prac prog.",
+  '19': "Insuff/lack/respiratory proctect",
+  '20': "Insuf/lack/protcv wrk clthg/equip",
+};
+
+const EVN_FACTOR = {
+  '1': "Pinch point action",
+  '2': "Catch point/puncture action",
+  '3': "Shear point action",
+  '4': "Squeeze point action",
+  '5': "Flying object action",
+  '6': "Overhead moving/falling obj ac",
+  '7': "Gas/vapor/mist/fume/smoke/dust",
+  '8': "Materials handlg equip./method",
+  '9': "Chemical action/reaction expos",
+  '10': "Flammable liq/solid exposure",
+  '11': "Temperature +/- tolerance lev.",
+  '12': "Radiation condition",
+  '13': "Work-surface/facil-layout cond",
+  '14': "Illumination",
+  '15': "Overpressure/underpressure",
+  '16': "Sound level",
+  '17': "Weather, earthquake, etc.",
+  '18': "Other",
 };
 
 // ---------- DOL API ----------
@@ -267,12 +424,30 @@ async function loadLookups(env) {
 }
 
 // Plain text when we have it; otherwise the raw code, never a blank.
-// Same as decode(), but with a built-in table to fall back on before the raw code.
-const decodeWith = (lookups, name, table, code) => {
-  if (code === null || code === undefined || String(code).trim() === '') return '';
-  const key = String(code).trim();
-  const hit = lookups && lookups[name] && lookups[name].get(key);
-  return hit || table[key] || key;
+// Dictionary first (DOL's published value lists), then its lookup datasets.
+// A few dictionary values are abbreviated for storage. These read better on screen.
+const READABLE = {
+  'LocalGovt': 'Local government',
+  'StateGovt': 'State government',
+  'FollowUp': 'Follow-up',
+  'Unprog Rel': 'Unprogrammed related',
+  'Prog Related': 'Programmed related',
+  'Unprog Other': 'Unprogrammed other',
+  'Prog Other': 'Programmed other',
+  'Other-L': 'Other',
+  'NoInspection': 'No inspection',
+  'Records': 'Records only',
+  'Fat/Cat': 'Fatality / catastrophe'
+};
+
+const fromDict = (table, code) => {
+  const key = String(code ?? '').trim();
+  if (!key) return '';
+  const value = table[key] || table[key.toUpperCase()] || '';
+  if (!value) return '';
+  const readable = READABLE[value] || value;
+  // DOL stores some values lower case ("health", "safety")
+  return readable.charAt(0).toUpperCase() + readable.slice(1);
 };
 
 const decode = (lookups, name, code) => {
@@ -361,7 +536,7 @@ function latestEventFor(citationId, events) {
     .filter(e => e.citation_id === citationId && e.pen_fta === 'P')
     .sort((a, b) => String(a.hist_date).localeCompare(String(b.hist_date)));
   const last = mine[mine.length - 1];
-  return last ? (HIST_EVENT[last.hist_event] || last.hist_event) : '';
+  return last ? (fromDict(HIST_EVENT, last.hist_event) || last.hist_event) : '';
 }
 
 // Street on one line, "City, ST ZIP" on the next. A state with no city is not
@@ -441,7 +616,7 @@ function initialTypeFrom(events, citationId) {
     .filter(e => String(e.citation_id) === String(citationId) && e.hist_vtype)
     .sort((a, b) => String(a.hist_date).localeCompare(String(b.hist_date)));
   const first = mine[0];
-  return first ? (VIOL_TYPE[String(first.hist_vtype).trim().toUpperCase()] || first.hist_vtype) : '';
+  return first ? (fromDict(VIOL_TYPE, first.hist_vtype) || first.hist_vtype) : '';
 }
 
 // accident_abstract holds the narrative split across numbered lines.
@@ -461,8 +636,11 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
   const count = t => live.filter(v => v.viol_type === t).length;
   const sum = f => live.reduce((n, v) => n + (parseFloat(v[f]) || 0), 0);
 
+  // insp_type M is OSHA's own Fat/Cat inspection type. A recorded fatality or a
+  // fatal injury row also sets the flag; an accident inspection with neither is a catastrophe.
   const fatal = accident?.fatality === 'X' || (injuries || []).some(i => Number(i.degree_of_inj) === 1);
-  const fatCat = fatal ? 'FAT' : (insp.insp_type === 'A' ? 'CAT' : null);
+  const fatCatType = String(insp.insp_type || '').trim().toUpperCase() === 'M';
+  const fatCat = fatal ? 'FAT' : (fatCatType ? 'FAT/CAT' : (insp.insp_type === 'A' ? 'CAT' : null));
 
   return {
     activityNr: String(insp.activity_nr),
@@ -476,17 +654,19 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
     siteAddress: addressBlock(insp.site_address, insp.site_city, insp.site_state, insp.site_zip),
     mailingAddress: addressBlock(insp.mail_street, insp.mail_city, insp.mail_state, insp.mail_zip),
     naics: insp.naics_code,
-    inspectionType: INSP_TYPE[insp.insp_type] || insp.insp_type || '',
-    scope: INSP_SCOPE[insp.insp_scope] || insp.insp_scope || '',
-    safetyHealth: SAFETY_HLTH[insp.safety_hlth] || insp.safety_hlth || '',
-    advancedNotice: insp.adv_notice || '',
+    inspectionType: fromDict(INSP_TYPE, insp.insp_type) || insp.insp_type || '',
+    scope: fromDict(INSP_SCOPE, insp.insp_scope) || insp.insp_scope || '',
+    safetyHealth: fromDict(SAFETY_HLTH, insp.safety_hlth) || insp.safety_hlth || '',
+    advancedNotice: fromDict(ADV_NOTICE, insp.adv_notice) || insp.adv_notice || '',
     employees: insp.nr_in_estab || '',
-    ownerType: OWNER_TYPE[insp.owner_type] || insp.owner_type || '',
+    unionStatus: fromDict(UNION_STATUS, insp.union_status),
+    whyNoInspection: fromDict(WHY_NO_INSP, insp.why_no_insp),
+    ownerType: fromDict(OWNER_TYPE, insp.owner_type) || insp.owner_type || '',
     migrant: flag(insp.migrant),
     planningGuides: planningGuides(insp),
     emphasisPrograms: (emphasis || [])
       .map(e => {
-        const label = PROG_TYPE[String(e.prog_type || '').trim().toUpperCase()] || e.prog_type || '';
+        const label = fromDict(PROG_TYPE, e.prog_type) || e.prog_type || '';
         const value = emphasisLabel(e.prog_value);
         return value ? (label ? `${label}: ${value}` : value) : label;
       })
@@ -507,7 +687,7 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       citationId: v.citation_id,
       initialCitationType: initialTypeFrom(events, v.citation_id)
         || VIOL_TYPE[v.initial_viol_type] || v.initial_viol_type || '',
-      citationType: VIOL_TYPE[v.viol_type] || v.viol_type || '',
+      citationType: fromDict(VIOL_TYPE, v.viol_type) || v.viol_type || '',
       standardCited: v.standard,
       issuanceDate: usDate(v.issuance_date),
       abatementDueDate: usDate(v.abate_date),
@@ -517,10 +697,11 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       contest: usDate(v.contest_date),
       latestEvent: latestEventFor(v.citation_id, events || []),
       standardDetails: genDutyText(genDuty, v.citation_id),
-      abateComplete: ABATE_COMPLETE[String(v.abate_complete || '').trim().toUpperCase()] || v.abate_complete || '',
+      abateComplete: fromDict(ABATE_COMPLETE, v.abate_complete) || v.abate_complete || '',
       finalOrderDate: usDate(v.final_order_date),
-      prompted: REC[v.rec] || v.rec || '',
+      prompted: fromDict(REC, v.rec) || v.rec || '',
       hazcat: v.hazcat || '',
+      gravity: String(v.gravity ?? '').trim() ? String(Number(v.gravity)) : '',
       emphasis: flag(v.emphasis),
       hazSubstances: hazSubs(v),
       accidentRelated: isAccidentCitation(v)
@@ -534,22 +715,20 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       keywords: accident?.event_keyword ?? '',
       injured: (injuries || []).map(i => ({
         inspection: String(i.rel_insp_nr ?? ''),
-        age: i.age, sex: i.sex,
-        degreeOfInjury: decode(lookups, 'degree', i.degree_of_inj)
-          || DEGREE_OF_INJ[Number(i.degree_of_inj)] || '',
+        age: i.age, sex: fromDict(SEX, i.sex) || i.sex || '',
+        degreeOfInjury: fromDict(DEGREE_OF_INJ, i.degree_of_inj) || decode(lookups, 'degree', i.degree_of_inj),
         natureOfInjury: decode(lookups, 'nature', i.nature_of_inj),
         occupation: decode(lookups, 'occupation', i.occ_code),
         partOfBody: decode(lookups, 'bodyPart', i.part_of_body),
         sourceOfInjury: decode(lookups, 'source', i.src_of_injury),
         eventType: decode(lookups, 'eventType', i.event_type),
-        humanFactor: decode(lookups, 'human', i.hum_factor),
-        environmentalFactor: decode(lookups, 'environmental', i.evn_factor),
-        taskAssigned: decode(lookups, 'task', i.task_assigned)
-          || TASK_ASSIGNED[Number(i.task_assigned)] || '',
+        humanFactor: fromDict(HUM_FACTOR, i.hum_factor) || decode(lookups, 'human', i.hum_factor),
+        environmentalFactor: fromDict(EVN_FACTOR, i.evn_factor) || decode(lookups, 'environmental', i.evn_factor),
+        taskAssigned: fromDict(TASK_ASSIGNED, i.task_assigned) || decode(lookups, 'task', i.task_assigned),
         hazardousSubstance: i.hazsub ?? '',
-        constructionOperation: decodeWith(lookups, 'operation', CONST_OPER, i.const_op),
-        constructionCause: decodeWith(lookups, 'operation', CONST_OPER, i.const_op_cause),
-        fatalityCause: decodeWith(lookups, 'fatalCause', FAT_CAUSE, i.fat_cause),
+        constructionOperation: fromDict(CONST_OPER, i.const_op) || decode(lookups, 'operation', i.const_op),
+        constructionCause: fromDict(CONST_OPER, i.const_op_cause) || decode(lookups, 'operation', i.const_op_cause),
+        fatalityCause: fromDict(FAT_CAUSE, i.fat_cause) || decode(lookups, 'fatalCause', i.fat_cause),
         injuryLine: i.injury_line_nr ?? '',
         fallDistance: i.fall_distance ?? '',
         fallHeight: i.fall_ht ?? ''
