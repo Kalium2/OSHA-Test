@@ -266,11 +266,22 @@ async function searchInspections(env, { name, state, since, limit = 25 }) {
 const LOOKUP_TABLE = 'accident_lookup2';
 
 const CODE_GROUP = {
-  occupation: 'OCC',   // confirmed
-  nature: 'NAT',       // nature_of_inj
-  bodyPart: 'PRT',     // part_of_body
-  source: 'SRC',       // src_of_injury
-  eventType: 'EVT'     // event_type
+  occupation: 'OCC',    // occ_code          573 codes
+  nature: 'IN',         // nature_of_inj      22
+  bodyPart: 'BD',       // part_of_body       31
+  source: 'SO',         // src_of_injury      48
+  eventType: 'FT',      // event_type         14
+  // also published, and used as a live fallback to the embedded dictionary
+  human: 'HU',          // hum_factor         20
+  environmental: 'EN',  // evn_factor         18
+  task: 'TASK',         // task_assigned       2
+  degree: 'DEGR',       // degree_of_inj       3
+  operation: 'OPER',    // const_op           71
+  fatalCause: 'CAUS',   // fat_cause          30
+  // project context on a construction incident
+  endUse: 'ENDU',       // const_end_use      17
+  projectType: 'PTYP',  // proj_type           5
+  projectCost: 'COST'   // proj_cost           7
 };
 
 const PROG_TYPE = {
@@ -734,6 +745,10 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       investigationNr: accident?.summary_nr ?? injuries[0]?.summary_nr ?? '',
       event: usDate(accident?.event_date),
       eventTime: accident?.event_time ?? '',
+      projectType: decode(lookups, 'projectType', accident?.proj_type),
+      projectCost: decode(lookups, 'projectCost', accident?.proj_cost),
+      constructionEndUse: decode(lookups, 'endUse', accident?.const_end_use),
+      buildingStories: accident?.build_stories ?? '',
       narrative: abstractText(abstractLines, accident),
       keywords: accident?.event_keyword ?? '',
       injured: (injuries || []).map(i => ({
