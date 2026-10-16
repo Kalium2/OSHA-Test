@@ -113,7 +113,120 @@ const LOOKUP_TABLES = {
   environmental: 'environmental', // evn_factor
   task: 'task',              // task_assigned
   occupation: 'occupation',  // occ_code
-  degree: 'degree_injury'    // degree_of_inj
+  degree: 'degree_injury',   // degree_of_inj
+  operation: 'operator',     // const_op and const_op_cause (code table OPER)
+  fatalCause: 'fatality'     // fat_cause (code table CAUS)
+};
+
+const PROG_TYPE = { N: 'NEP', L: 'LEP', S: 'Strategic Plan', P: 'Primary Emphasis' };
+
+// Construction operation / cause of injury (code table OPER), from the OSHA data dictionary.
+const CONST_OPER = {
+  1: "Backfilling and compacting",
+  2: "Bituminous concrete placement",
+  3: "Construction of playing fields, tennis courts",
+  4: "Cutting concrete pavement",
+  5: "Demolition",
+  6: "Dredging",
+  7: "Elevator, escalator installation",
+  8: "Emplacing reinforcing steel",
+  9: "Erecting structural steel",
+  10: "Erection of coffer dams, caissons",
+  11: "Excavation",
+  12: "Exterior masonry",
+  13: "Exterior cladding",
+  14: "Exterior carpentry",
+  15: "Exterior painting",
+  16: "Fencing, installing lights, signs, etc.",
+  17: "Fireproofing",
+  18: "Forming",
+  19: "Forming for piers or pylons",
+  20: "Installing interior walls, ceilings, doors",
+  21: "Installing metal siding",
+  22: "Installing windows and doors, glazing",
+  23: "Installing culverts and incidental drainage",
+  24: "Installing equipment (HVAC and other)",
+  25: "Installing plumbing, lighting fixtures",
+  26: "Installing underground plumbing conduit",
+  27: "Interior tile work (ceramic, vinyl, acoustic)",
+  28: "Interior masonry",
+  29: "Interior plumbing, ducting, electrical work",
+  30: "Interior carpentry",
+  31: "Interior painting and decorating",
+  32: "Landscaping",
+  33: "Loading dock forming and pouring",
+  34: "Paving",
+  35: "Pile driving",
+  36: "Placing bridge deck",
+  37: "Placing bridge girders and beams",
+  38: "Plastering",
+  39: "Pouring or installing floor decks",
+  40: "Pouring concrete floor at grade",
+  41: "Pouring concrete for piers, and pylons",
+  42: "Pouring concrete foundations and walls",
+  43: "Roofing",
+  44: "Seawall construction, riprap placement",
+  45: "Site clearing and grubbing",
+  46: "Site grading and rock removal",
+  47: "Stripping and curing concrete",
+  48: "Surveying",
+  49: "Swimming pool construction",
+  50: "Temporary work (buildings, facilities)",
+  51: "Traffic protection",
+  52: "Trenching, installing pipe",
+  53: "Waterproofing",
+  54: "Steel Erection Of Solid Web-Connecting",
+  55: "Steel Erection Of Solid Web-Bolting-Up/Detail Work",
+  56: "Steel Erection Of Solid Web-Welding/Burning/Grindi",
+  57: "Steel Erection Of Solid Web-Plumbing-Up",
+  58: "Steel Erection Of Solid Web-Moving Point To Point",
+  59: "Steel Erection Of Solid Web-Landing Materials (Hoi",
+  60: "Steel Erection Of Open Web Steel Joists-Connecting",
+  61: "Steel Erection Of Open Web Steel Joists-Bolting-Up",
+  62: "Steel Erection Of Open Web Steel Joists-Welding/Bu",
+  63: "Steel Erection Of Open Web Steel Joists-Plumbing-U",
+  64: "Steel Erection Of Open Web Steel Joists-Moving Poi",
+  65: "Steel Erection Of Open Web Steel Joists-Landing Ma",
+  66: "Installation Of Decking-Initial Laying Deck (Incl",
+  67: "Installation Of Decking-Final Attachment Deck (Wel",
+  68: "Installation Of Decking-Flashing Of Decking",
+  69: "Installation Of Decking-Hoisting Bundles",
+  70: "Other Activities-Installing Ornamental And Archite",
+  71: "Other Activities-Post Decking Detail Work",
+};
+
+// Construction cause of fatality (code table CAUS), from the OSHA data dictionary.
+const FAT_CAUSE = {
+  1: "Asphyxiation/inhalation of toxic vapor",
+  2: "Caught in stationary equipment",
+  3: "Collapse of structure",
+  4: "Crushed/run-over of non-operator by operating cons",
+  5: "Crushed/run-over/trapped of operator by operating",
+  6: "Crushed/run-over by construction equipment during",
+  7: "Crushed/run-over by highway vehicle",
+  8: "Electrocution by touching exposed wire/source",
+  9: "Electrocution by equipment contacting wire",
+  10: "Electrocution from equipment installation/tool use",
+  11: "Electric shock, other and unknown cause",
+  12: "Drown, non-lethal fall",
+  13: "Elevator (struck by elevator or counter-weights)",
+  14: "Fall from/with ladder",
+  15: "Fall from roof",
+  16: "Fall from/with scaffold",
+  17: "Fall from/with bucket (aerial lift/basket)",
+  18: "Fall from/with structure (other than roof)",
+  19: "Fall from/with platform catwalk (attached to struc",
+  20: "Fall through opening (other than roof)",
+  21: "Fall, other",
+  22: "Fall from vehicle (vehicle/construction equipment)",
+  23: "Fire/explosion",
+  24: "Heat/hypothermia",
+  25: "Lifting operations",
+  26: "Struck by falling object/projectile",
+  27: "Trench collapse",
+  28: "Unloading-loading equipment/material (except by cr",
+  29: "Wall (earthen) collapse",
+  30: "Other",
 };
 
 async function loadLookups(env) {
@@ -134,6 +247,14 @@ async function loadLookups(env) {
 }
 
 // Plain text when we have it; otherwise the raw code, never a blank.
+// Same as decode(), but with a built-in table to fall back on before the raw code.
+const decodeWith = (lookups, name, table, code) => {
+  if (code === null || code === undefined || String(code).trim() === '') return '';
+  const key = String(code).trim();
+  const hit = lookups && lookups[name] && lookups[name].get(key);
+  return hit || table[key] || key;
+};
+
 const decode = (lookups, name, code) => {
   if (code === null || code === undefined || String(code).trim() === '') return '';
   const key = String(code).trim();
@@ -151,11 +272,12 @@ async function loadInspections(env, inspections) {
   if (!inspections.length) return [];
   const ids = inspections.map(i => String(i.activity_nr));
 
-  const [violations, events, injuries, genDuty] = await Promise.all([
+  const [violations, events, injuries, genDuty, emphasis] = await Promise.all([
     dol(env, 'violation', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
     dol(env, 'violation_event', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
     dol(env, 'accident_injury', inList('rel_insp_nr', ids), { limit: 200 }).catch(() => []),
-    dol(env, 'violation_gen_duty_std', inList('activity_nr', ids), { limit: 200 }).catch(() => [])
+    dol(env, 'violation_gen_duty_std', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
+    dol(env, 'emphasis_codes', inList('activity_nr', ids), { limit: 200 }).catch(() => [])
   ]);
 
   // Accident narratives, in one more call, keyed by the injuries' summary numbers.
@@ -182,6 +304,7 @@ async function loadInspections(env, inspections) {
   const iByInsp = by(injuries, 'rel_insp_nr');
   const aBySummary = by(accidents, 'summary_nr');
   const gdByInsp = by(genDuty, 'activity_nr');
+  const empByInsp = by(emphasis, 'activity_nr');
   const absBySummary = by(abstracts, 'summary_nr');
 
   // Code tables, fetched once per request and only when there is an injury to decode.
@@ -199,7 +322,8 @@ async function loadInspections(env, inspections) {
       accident: summaryNr ? (aBySummary.get(String(summaryNr)) || [])[0] || null : null,
       abstractLines: summaryNr ? (absBySummary.get(String(summaryNr)) || []) : [],
       lookups,
-      genDuty: gdByInsp.get(id) || []
+      genDuty: gdByInsp.get(id) || [],
+      emphasis: empByInsp.get(id) || []
     };
   });
 }
@@ -312,7 +436,7 @@ function abstractText(lines, accident) {
   return text || accident?.abstract_text || '';
 }
 
-export function mapRecord({ insp, violations, events, injuries, accident, abstractLines, genDuty, lookups }) {
+export function mapRecord({ insp, violations, events, injuries, accident, abstractLines, genDuty, emphasis, lookups }) {
   const live = (violations || []).filter(v => v.delete_flag !== 'D');
   const count = t => live.filter(v => v.viol_type === t).length;
   const sum = f => live.reduce((n, v) => n + (parseFloat(v[f]) || 0), 0);
@@ -340,6 +464,13 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
     ownerType: OWNER_TYPE[insp.owner_type] || insp.owner_type || '',
     migrant: flag(insp.migrant),
     planningGuides: planningGuides(insp),
+    emphasisPrograms: (emphasis || [])
+      .map(e => {
+        const label = PROG_TYPE[String(e.prog_type || '').trim().toUpperCase()] || e.prog_type || '';
+        const value = String(e.prog_value || '').trim();
+        return value ? (label ? `${label}: ${value}` : value) : label;
+      })
+      .filter(Boolean).join(' · '),
 
     counts: {
       serious: count('S'), willful: count('W'), repeat: count('R'),
@@ -396,6 +527,10 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
         taskAssigned: decode(lookups, 'task', i.task_assigned)
           || TASK_ASSIGNED[Number(i.task_assigned)] || '',
         hazardousSubstance: i.hazsub ?? '',
+        constructionOperation: decodeWith(lookups, 'operation', CONST_OPER, i.const_op),
+        constructionCause: decodeWith(lookups, 'operation', CONST_OPER, i.const_op_cause),
+        fatalityCause: decodeWith(lookups, 'fatalCause', FAT_CAUSE, i.fat_cause),
+        injuryLine: i.injury_line_nr ?? '',
         fallDistance: i.fall_distance ?? '',
         fallHeight: i.fall_ht ?? ''
       }))
