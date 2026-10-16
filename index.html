@@ -73,6 +73,16 @@
   .estab-search input { font-family: var(--sans); font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg); color: var(--ink); }
   .estab-search input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
   #estabName { flex: 1 1 260px; min-width: 180px; }
+  .case-counts { display: flex; gap: 18px; align-items: baseline; margin-top: 16px; font-size: 12.5px; color: var(--ink-soft); }
+  .case-count .n { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--ink); margin-right: 4px; }
+  .citations-list { display: flex; flex-direction: column; gap: 12px; }
+  .citation-block { border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; background: var(--bg); }
+  .citation-block .viol-table thead th[data-csort] { cursor: pointer; user-select: none; }
+  .citation-block .viol-table thead th[data-csort]:hover { color: var(--ink); background: var(--select-bg); }
+  .citation-block tbody tr.citations-row td { border-bottom: none; }
+  .inv-meta-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 12px; margin-bottom: 10px; }
+  .inv-meta-grid .kv { margin: 0; }
+  .inv-meta-grid .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
   .empty-toggle { font-size: 12px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
   table.inspections-table thead th[data-sort] { cursor: pointer; user-select: none; }
   table.inspections-table thead th[data-sort]:hover { color: var(--ink); background: var(--select-bg); }
@@ -147,7 +157,7 @@
   /* ---- aggregate summary strip ---- */
   .section-heading { font-size: 13px; font-weight: 700; color: var(--ink); margin: 18px 0 10px; }
   .agg-strip { display: none; margin-bottom: 16px; border: 1px solid var(--line); }
-  .agg-strip.visible { display: grid; grid-template-columns: repeat(10, 1fr); }
+  .agg-strip.visible { display: grid; grid-template-columns: repeat(8, 1fr); }
   .agg-tile { background: var(--bg); padding: 10px 10px; text-align: center; border-right: 1px solid var(--line); }
   .agg-tile:last-child { border-right: none; }
   .agg-tile .n { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--ink); }
@@ -394,14 +404,18 @@
     <div class="agg-tile"><div class="n">—</div><div class="l">Unclass.</div></div>
     <div class="agg-tile money"><div class="n">—</div><div class="l">Total current penalties</div></div>
     <div class="agg-tile money"><div class="n">—</div><div class="l">Total original penalties</div></div>
-    <div class="agg-tile"><div class="n">—</div><div class="l">Open</div></div>
-    <div class="agg-tile"><div class="n">—</div><div class="l">Closed</div></div>
   </div>
 
   <div class="empty-state" id="emptyState">
     <div class="glyph">⚠</div>
     <h3>No inspection loaded</h3>
     <p>Click "Get OSHA data" to add a blank inspection form, then fill in each field directly to test how your data maps to the layout.</p>
+  </div>
+
+  <div class="case-counts" id="caseCounts" style="display:none;">
+    <span class="case-count"><span class="n" id="countTotal">0</span> inspections</span>
+    <span class="case-count"><span class="n" id="countOpen">0</span> open</span>
+    <span class="case-count"><span class="n" id="countClosed">0</span> closed</span>
   </div>
 
   <div class="inspections-table-wrap" id="inspectionsTableWrap" style="display:none;">
@@ -411,8 +425,8 @@
           <th>#</th>
           <th>Inspection</th>
           <th data-sort="dateOpened">Date Opened <span class="sort-ind"></span></th>
-          <th>Case Status</th>
-          <th>ST</th>
+          <th data-sort="caseStatus">Case Status <span class="sort-ind"></span></th>
+          <th data-sort="state">ST <span class="sort-ind"></span></th>
           <th class="num" data-sort="serious">Serious <span class="sort-ind"></span></th>
           <th class="num" data-sort="willful">Willful <span class="sort-ind"></span></th>
           <th class="num" data-sort="repeat">Repeat <span class="sort-ind"></span></th>
@@ -437,8 +451,8 @@
               <th>#</th>
               <th>Activity</th>
               <th data-sort="dateOpened">Date Opened <span class="sort-ind"></span></th>
-              <th>Case Status</th>
-              <th>ST</th>
+              <th data-sort="caseStatus">Case Status <span class="sort-ind"></span></th>
+              <th data-sort="state">ST <span class="sort-ind"></span></th>
               <th class="num" data-sort="serious">Serious <span class="sort-ind"></span></th>
               <th class="num" data-sort="willful">Willful <span class="sort-ind"></span></th>
               <th class="num" data-sort="repeat">Repeat <span class="sort-ind"></span></th>
@@ -493,80 +507,46 @@
         <span class="title-left">Violation Items</span>
         <button class="btn btn-ghost btn-sm" data-action="add-citation" type="button">+ Add citation</button>
       </p>
+      <div class="citations-list"></div>
+      <div class="no-citations">No citations yet — click "+ Add citation" to add one.</div>
+    </div>
+
+    <div class="section related-section">
+      <p class="section-title"><span class="title-left">Related Activity</span></p>
       <div class="table-scroll">
-        <table class="viol-table">
-          <colgroup>
-            <col style="width:62px"><col style="width:7%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:11%">
-            <col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:8%">
-            <col style="width:9%"><col><col style="width:10%"><col style="width:26px">
-          </colgroup>
+        <table class="related-table">
+          <colgroup><col style="width:30px"><col style="width:20%"><col style="width:20%"><col style="width:15%"><col style="width:15%"></colgroup>
           <thead>
             <tr>
               <th>#</th>
-              <th>Citation ID</th>
-              <th>Initial Citation Type</th>
-              <th>Current Citation Type</th>
-              <th>Standard Cited</th>
-              <th>Issuance Date</th>
-              <th>Abatement Due Date</th>
-              <th class="num">Current Penalty</th>
-              <th class="num">Initial Penalty</th>
-              <th class="num">FTA Penalty</th>
-              <th>Contest</th>
-              <th>Latest Event</th>
-              <th>Note</th>
-              <th></th>
+              <th>Type</th>
+              <th>Activity #</th>
+              <th>Safety</th>
+              <th>Health</th>
             </tr>
           </thead>
-          <tbody class="citations-body"></tbody>
+          <tbody class="related-body"></tbody>
         </table>
       </div>
-      <div class="no-citations">No citations yet — click "+ Add citation" to add one.</div>
     </div>
 
     <div class="investigation-summary">
       <div class="inv-head">
         <h3 class="inv-title">Investigation Summary</h3>
       </div>
-      <div class="inv-meta-row">
-        <div><span class="k">Investigation Nr:</span><input class="f-input f-invNr f-sm" type="text"></div>
-        <div><span class="k">Event:</span><input class="f-input f-invEvent f-sm" type="text" placeholder="MM/DD/YYYY"></div>
-        <div><span class="k">Event Time:</span><input class="f-input f-invEventTime f-sm" type="text"></div>
+      <div class="inv-meta-grid">
+        <div class="kv"><span class="k">Investigation #:</span><input class="f-input f-invNr" type="text"></div>
+        <div class="kv"><span class="k">Event Date:</span><input class="f-input f-invEvent" type="text" placeholder="MM/DD/YYYY"></div>
+        <div class="kv"><span class="k">Event Time:</span><input class="f-input f-invEventTime" type="text"></div>
+        <div class="kv"><span class="k">Age:</span><input class="f-input f-invAge" type="text"></div>
+        <div class="kv"><span class="k">Sex:</span><input class="f-input f-invSex" type="text"></div>
+        <div class="kv"><span class="k">Degree of Injury:</span><input class="f-input f-invDegree" type="text"></div>
+        <div class="kv"><span class="k">Nature of Injury:</span><input class="f-input f-invNature" type="text"></div>
+        <div class="kv"><span class="k">Occupation:</span><input class="f-input f-invOccupation" type="text"></div>
       </div>
       <div class="inv-narrative-row">
         <textarea class="f-input f-invNarrative" rows="2" placeholder="Incident narrative…"></textarea>
       </div>
-      <p class="inv-subheading">Investigated Inspection</p>
-      <div class="table-scroll">
-        <table class="inv-table">
-          <colgroup>
-            <col style="width:30px"><col style="width:14%"><col style="width:7%"><col style="width:7%"><col style="width:20%"><col style="width:24%"><col>
-          </colgroup>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Inspection</th>
-              <th>Age</th>
-              <th>Sex</th>
-              <th>Degree of Injury</th>
-              <th>Nature of Injury</th>
-              <th>Occupation</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td><input class="f-input f-invInspection f-sm" type="text"></td>
-              <td><input class="f-input f-invAge f-sm" type="text"></td>
-              <td><input class="f-input f-invSex f-sm" type="text"></td>
-              <td><input class="f-input f-invDegree f-sm" type="text"></td>
-              <td><input class="f-input f-invNature f-sm" type="text"></td>
-              <td><input class="f-input f-invOccupation f-sm" type="text"></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
       <p class="inv-subheading inv-detail-heading">Injury Detail</p>
       <div class="inv-detail-grid">
         <div class="kv"><span class="k">Part of Body:</span><input class="f-input f-invPartOfBody" type="text"></div>
@@ -589,22 +569,70 @@
   </div>
 </template>
 
-<template id="citationRowTemplate">
-  <tr class="citations-row">
+<template id="citationBlockTemplate">
+  <div class="citation-block">
+    <div class="table-scroll">
+      <table class="viol-table">
+        <colgroup>
+          <col style="width:62px"><col style="width:9%"><col style="width:7%"><col style="width:7%"><col style="width:13%">
+          <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%">
+          <col style="width:8%"><col>
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Citation ID</th>
+            <th>Initial Citation Type</th>
+            <th data-csort="citationType">Current Citation Type <span class="sort-ind"></span></th>
+            <th>Standard Cited</th>
+            <th>Issuance Date</th>
+            <th>Abatement Due Date</th>
+            <th class="contest-col">Contest</th>
+            <th class="num" data-csort="currentPenalty">Current Penalty <span class="sort-ind"></span></th>
+            <th class="num" data-csort="initialPenalty">Initial Penalty <span class="sort-ind"></span></th>
+            <th class="num">FTA Penalty</th>
+            <th>Latest Event</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="citations-row">
+            <td class="row-num"></td>
+            <td><input class="f-input f-sm" type="text" data-field="citationId"></td>
+            <td><input class="f-input f-sm" type="text" data-field="initialCitationType"></td>
+            <td><input class="f-input f-sm" type="text" data-field="citationType"></td>
+            <td><textarea class="f-input f-sm f-standardCited" rows="1" data-field="standardCited"></textarea></td>
+            <td><input class="f-input f-sm" type="text" data-field="issuanceDate" placeholder="MM/DD/YYYY"></td>
+            <td><input class="f-input f-sm" type="text" data-field="abatementDueDate" placeholder="MM/DD/YYYY"></td>
+            <td class="contest-col"><input class="f-input f-sm" type="text" data-field="contest" placeholder="MM/DD/YYYY"></td>
+            <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="currentPenalty"></span></td>
+            <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="initialPenalty"></span></td>
+            <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="ftaPenalty"></span></td>
+            <td><input class="f-input f-sm" type="text" data-field="latestEvent"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cit-def">
+      <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
+    </div>
+    <div class="cit-extra">
+      <div class="kv"><span class="k">Abatement Complete:</span><input class="f-input" type="text" data-field="abateComplete"></div>
+      <div class="kv"><span class="k">Final Order Date:</span><input class="f-input" type="text" data-field="finalOrderDate" placeholder="MM/DD/YYYY"></div>
+      <div class="kv"><span class="k">Prompted By:</span><input class="f-input" type="text" data-field="prompted"></div>
+      <div class="kv"><span class="k">Hazard Category:</span><input class="f-input" type="text" data-field="hazcat"></div>
+      <div class="kv"><span class="k">Emphasis Program:</span><input class="f-input" type="text" data-field="emphasis"></div>
+      <div class="kv"><span class="k">Hazardous Substances:</span><input class="f-input" type="text" data-field="hazSubstances"></div>
+    </div>
+  </div>
+</template>
+
+<template id="relatedRowTemplate">
+  <tr class="related-row">
     <td class="row-num"></td>
-    <td><input class="f-input f-sm" type="text" data-field="citationId"></td>
-    <td><input class="f-input f-sm" type="text" data-field="initialCitationType"></td>
-    <td><input class="f-input f-sm" type="text" data-field="citationType"></td>
-    <td><textarea class="f-input f-sm f-standardCited" rows="1" data-field="standardCited"></textarea></td>
-    <td><input class="f-input f-sm" type="text" data-field="issuanceDate" placeholder="MM/DD/YYYY"></td>
-    <td><input class="f-input f-sm" type="text" data-field="abatementDueDate" placeholder="MM/DD/YYYY"></td>
-    <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="currentPenalty"></span></td>
-    <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="initialPenalty"></span></td>
-    <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="ftaPenalty"></span></td>
-    <td><input class="f-input f-sm" type="text" data-field="contest" placeholder="MM/DD/YYYY"></td>
-    <td><input class="f-input f-sm" type="text" data-field="latestEvent"></td>
-    <td><input class="f-input f-sm" type="text" data-field="note"></td>
-    <td><button class="del-icon" data-action="delete-citation" type="button" aria-label="Delete citation">✕</button></td>
+    <td><input class="f-input f-sm" type="text" data-rel="type"></td>
+    <td><input class="f-input f-sm" type="text" data-rel="activityNr"></td>
+    <td><input class="f-input f-sm" type="text" data-rel="safety"></td>
+    <td><input class="f-input f-sm" type="text" data-rel="health"></td>
   </tr>
 </template>
 
@@ -647,8 +675,8 @@
   const emptyState = document.getElementById('emptyState');
   const aggStrip = document.getElementById('aggStrip');
   const detailTmpl = document.getElementById('recordDetailTemplate');
-  const citationRowTmpl = document.getElementById('citationRowTemplate');
-  const citationDefTmpl = document.getElementById('citationDefTemplate');
+  const citationBlockTmpl = document.getElementById('citationBlockTemplate');
+  const relatedRowTmpl = document.getElementById('relatedRowTemplate');
   const deletedBody = document.getElementById('deletedBody');
   const deletedTableWrap = document.getElementById('deletedTableWrap');
   const deletedEmptyMsg = document.getElementById('deletedEmptyMsg');
@@ -697,7 +725,11 @@
 
   function recalcAgg() {
     const rows = recordsBody.querySelectorAll('tr.insp-row');
-    if (!rows.length) { aggStrip.classList.remove('visible'); return; }
+    if (!rows.length) {
+      aggStrip.classList.remove('visible');
+      document.getElementById('caseCounts').style.display = 'none';
+      return;
+    }
     let t = { serious: 0, willful: 0, repeat: 0, fatcat: 0, other: 0, unclass: 0, curr: 0, orig: 0, open: 0, closed: 0 };
     rows.forEach(r => {
       t.serious += num(r.dataset.serious);
@@ -708,9 +740,10 @@
       t.unclass += num(r.dataset.unclass);
       t.curr += num(r.dataset.currPenalty);
       t.orig += num(r.dataset.origPenalty);
-      const status = (r.querySelector('.case-status-input').value || '').trim().toUpperCase();
-      if (status === 'CLOSED') t.closed += 1;
-      else if (status === 'OPEN') t.open += 1;
+      // A case with no close date is still open.
+      const closed = (r.querySelector('.f-dateClosed').value || '').trim()
+        || (r.querySelector('.case-status-input').value || '').trim().toUpperCase() === 'CLOSED';
+      if (closed) t.closed += 1; else t.open += 1;
     });
     aggTiles[0].textContent = t.serious;
     aggTiles[1].textContent = t.willful;
@@ -720,8 +753,11 @@
     aggTiles[5].textContent = t.unclass;
     aggTiles[6].textContent = money(t.curr);
     aggTiles[7].textContent = money(t.orig);
-    aggTiles[8].textContent = t.open;
-    aggTiles[9].textContent = t.closed;
+
+    document.getElementById('countTotal').textContent = rows.length;
+    document.getElementById('countOpen').textContent = t.open;
+    document.getElementById('countClosed').textContent = t.closed;
+    document.getElementById('caseCounts').style.display = 'flex';
     aggStrip.classList.add('visible');
   }
 
@@ -732,41 +768,61 @@
     deletedEmptyMsg.style.display = hasAny ? 'none' : 'block';
   }
 
-  function addCitationRow(detailEl) {
-    const node = citationRowTmpl.content.cloneNode(true);
-    const row = node.querySelector('tr');
-    const body = detailEl.querySelector('.citations-body');
-    body.appendChild(row);
-
-    // Definition sub-row directly under this violation item, populated from the standards data source.
-    const defRow = citationDefTmpl.content.cloneNode(true).querySelector('tr');
-    body.appendChild(defRow);
-    const defText = defRow.querySelector('.f-stdDefinition');
-    // Production: set the definition from the data source, e.g.
-    //   defText.value = lookupStandardDefinition(standardCited); autosize(defText);
-
-    renumberCitations(detailEl);
-    row.querySelector('[data-action="delete-citation"]').addEventListener('click', () => {
-      row.remove();
-      defRow.remove();
-      renumberCitations(detailEl);
-      toggleNoCitations(detailEl);
-      if (detailEl._syncPenaltyTotalsFromItems) detailEl._syncPenaltyTotalsFromItems();
+  // Each citation is its own block: header banner, its row, the standard
+  // details line, and the extra fields below it.
+  function addCitationBlock(detailEl) {
+    const block = citationBlockTmpl.content.cloneNode(true).querySelector('.citation-block');
+    detailEl.querySelector('.citations-list').appendChild(block);
+    block.querySelectorAll('th[data-csort]').forEach(th => {
+      th.addEventListener('click', () => sortCitations(detailEl, th.dataset.csort));
     });
+    renumberCitations(detailEl);
     toggleNoCitations(detailEl);
+    return block;
   }
   function renumberCitations(detailEl) {
-    detailEl.querySelectorAll('.citations-body tr.citations-row').forEach((row, i) => {
-      const cell = row.querySelector('.row-num');
+    detailEl.querySelectorAll('.citation-block').forEach((block, i) => {
+      const cell = block.querySelector('.row-num');
       const flag = cell.querySelector('.cit-flag');   // keep any FAT/CAT marker
       cell.textContent = (i + 1) + '.';
       if (flag) cell.appendChild(flag);
     });
   }
   function toggleNoCitations(detailEl) {
-    const body = detailEl.querySelector('.citations-body');
-    const msg = detailEl.querySelector('.no-citations');
-    msg.style.display = body.children.length ? 'none' : 'block';
+    const any = detailEl.querySelectorAll('.citation-block').length;
+    detailEl.querySelector('.no-citations').style.display = any ? 'none' : 'block';
+  }
+
+  // Sorting inside one inspection: Willful, Repeat, Serious, then the rest.
+  const CIT_RANK = { 'willful': 1, 'repeat': 2, 'serious': 3, 'other': 4, 'unclassified': 5 };
+  const citSortState = new WeakMap();
+
+  function sortCitations(detailEl, key) {
+    const prev = citSortState.get(detailEl) || {};
+    const dir = (prev.key === key && prev.dir === 'desc') ? 'asc' : 'desc';
+    citSortState.set(detailEl, { key, dir });
+    const sign = dir === 'asc' ? 1 : -1;
+
+    const value = block => {
+      const el = block.querySelector(`[data-field="${key}"]`);
+      const raw = el ? String(el.value || '').trim() : '';
+      if (key === 'citationType') {
+        // rank ascending = most severe first, so invert for the shared comparator
+        return -(CIT_RANK[raw.toLowerCase()] || 9);
+      }
+      return parseFloat(raw.replace(/[^0-9.-]/g, '')) || 0;
+    };
+
+    const list = detailEl.querySelector('.citations-list');
+    [...detailEl.querySelectorAll('.citation-block')]
+      .sort((a, b) => (value(a) - value(b)) * sign)
+      .forEach(block => list.appendChild(block));
+    renumberCitations(detailEl);
+
+    detailEl.querySelectorAll('th[data-csort]').forEach(th => {
+      th.classList.toggle('sorted-asc', th.dataset.csort === key && dir === 'asc');
+      th.classList.toggle('sorted-desc', th.dataset.csort === key && dir === 'desc');
+    });
   }
 
   function wireDetail(detailEl, summaryRow) {
@@ -782,7 +838,7 @@
 
     // Total current/original penalties now come from the Violation Items rows instead.
     function syncPenaltyTotalsFromItems() {
-      const rows = Array.from(detailEl.querySelectorAll('.citations-body tr.citations-row'));
+      const rows = Array.from(detailEl.querySelectorAll('.citations-row'));
       let curr = 0, orig = 0;
       rows.forEach(row => {
         const currInp = row.querySelector('input[data-field="currentPenalty"]');
@@ -802,7 +858,7 @@
     detailEl._syncPenaltyTotalsFromItems = syncPenaltyTotalsFromItems;
 
     detailEl.querySelector('[data-action="add-citation"]').addEventListener('click', () => {
-      addCitationRow(detailEl);
+      addCitationBlock(detailEl);
       syncPenaltyTotalsFromItems();
     });
 
@@ -812,6 +868,7 @@
       if (activityInput) activityInput.classList.toggle('case-open', caseStatusInput.value.trim().toUpperCase() === 'OPEN');
     }
     caseStatusInput.addEventListener('input', () => { applyCaseStatus(); recalcAgg(); });
+    summaryRow.querySelector('.f-dateClosed').addEventListener('input', recalcAgg);
     applyCaseStatus();
   }
 
@@ -1006,30 +1063,37 @@
     setField(d.querySelector('.f-planningGuides'), rec.planningGuides);
 
     (rec.violationItems || []).forEach(item => {
-      addCitationRow(d);
-      const rows = d.querySelectorAll('.citations-body tr.citations-row');
-      const row = rows[rows.length - 1];
-      const extraRow = row.nextElementSibling;
+      const block = addCitationBlock(d);
       Object.keys(item).forEach(k => {
         if (k === 'standardDetails') return;
-        // main row first, then the extras line below it
-        const el = row.querySelector(`[data-field="${k}"]`)
-          || (extraRow && extraRow.querySelector(`[data-field="${k}"]`));
-        setField(el, item[k]);
+        setField(block.querySelector(`[data-field="${k}"]`), item[k]);
       });
-      setField(extraRow && extraRow.querySelector('.f-stdDefinition'), item.standardDetails);
+      setField(block.querySelector('.f-stdDefinition'), item.standardDetails);
       if (item.accidentRelated) {
-        row.classList.add('accident-related');
+        block.querySelector('.citations-row').classList.add('accident-related');
         const tag = document.createElement('span');
         tag.className = 'cit-flag';
         tag.textContent = 'FAT/CAT';
-        row.querySelector('.row-num').appendChild(tag);
+        block.querySelector('.row-num').appendChild(tag);
       }
+      // Contest only shows when there is a date to show.
+      const contest = block.querySelector('[data-field="contest"]');
+      const show = !!String(contest.value || '').trim();
+      block.querySelectorAll('.contest-col').forEach(el => el.classList.toggle('is-empty', !show));
+    });
+
+    const relatedBody = d.querySelector('.related-body');
+    (rec.relatedActivity || []).forEach((rel, i) => {
+      const row = relatedRowTmpl.content.cloneNode(true).querySelector('tr');
+      row.querySelector('.row-num').textContent = (i + 1) + '.';
+      Object.keys(rel).forEach(k => setField(row.querySelector(`[data-rel="${k}"]`), rel[k]));
+      relatedBody.appendChild(row);
     });
 
     // Sections only appear when the inspection actually has that data.
     const hasViolations = (rec.violationItems || []).length > 0;
     d.querySelector('.violations-section').style.display = hasViolations ? '' : 'none';
+    d.querySelector('.related-section').style.display = (rec.relatedActivity || []).length ? '' : 'none';
 
     const inv = rec.investigation;
     d.querySelector('.investigation-summary').style.display = inv ? '' : 'none';
@@ -1041,7 +1105,6 @@
       setField(d.querySelector('.f-invKeywords'), inv.keywords);
       const first = (inv.injured || [])[0];
       if (first) {
-        setField(d.querySelector('.f-invInspection'), first.inspection);
         setField(d.querySelector('.f-invAge'), first.age);
         setField(d.querySelector('.f-invSex'), first.sex);
         setField(d.querySelector('.f-invDegree'), first.degreeOfInjury);
@@ -1133,6 +1196,11 @@
       // undated rows sort last in both directions
       return m ? Number(`${m[3]}${m[1].padStart(2, '0')}${m[2].padStart(2, '0')}`) : null;
     }
+    if (key === 'caseStatus' || key === 'state') {
+      const sel = key === 'caseStatus' ? '.case-status-input' : '.f-state';
+      const v = (row.querySelector(sel).value || '').trim().toUpperCase();
+      return v || null;   // blanks sort last
+    }
     if (key === 'fatcat') return row.dataset.fatcat ? 1 : 0;
     const input = row.querySelector(`input[data-cat="${key}"]`);
     return input ? (parseFloat(input.value) || 0) : 0;
@@ -1149,6 +1217,9 @@
       if (a.v === null && b.v === null) return 0;
       if (a.v === null) return 1;      // blanks always at the bottom
       if (b.v === null) return -1;
+      if (typeof a.v === 'string' || typeof b.v === 'string') {
+        return String(a.v).localeCompare(String(b.v)) * sign;
+      }
       return (a.v - b.v) * sign;
     });
     pairs.forEach(({ row, detail }) => {
