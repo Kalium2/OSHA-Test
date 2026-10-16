@@ -379,7 +379,8 @@
           <dt>FAT/CAT</dt><dd>Fatality or catastrophe inspection. Citations tied to the accident sort to the top and carry the same marker.</dd>
           <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
           <dt>Inspection Type / Scope / Safety-Health</dt><dd>Why the inspection happened, how much of the site it covered, and whether it was a safety or health inspection.</dd>
-          <dt>Employees / Owner Type / Migrant Labor</dt><dd>Headcount at the site, private or government employer, and whether migrant labor was involved.</dd>
+          <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount at the site, private or government employer, whether migrant labor was involved, and whether the workforce was represented.</dd>
+          <dt>Why No Inspection</dt><dd>Where OSHA opened a case but did not inspect, the reason: out of business, denied entry, too few employees, and so on.</dd>
           <dt>Emphasis Programs</dt><dd>National or local emphasis programs the inspection fell under, such as a fall-hazard or heat NEP. A targeted inspection rather than a random one.</dd>
           <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and by industry.</dd>
 
@@ -391,6 +392,7 @@
           <dt>Latest Event</dt><dd>The most recent action on the citation, such as an informal or formal settlement.</dd>
           <dt>Abatement Complete / FTA Penalty</dt><dd>Whether the hazard was fixed and how it was resolved if not. FTA = Penalty for Failure to Abate.</dd>
           <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
+          <dt>Gravity</dt><dd>OSHA's severity score for a serious violation, 1 to 10. Higher means a more severe hazard.</dd>
           <dt>Hazard Category / Hazardous Substances / Emphasis Program</dt><dd>The hazard involved, any substance codes recorded, and whether it fell under an emphasis program.</dd>
 
           <dt>Investigation Summary</dt><dd>Appears for accident inspections: the incident narrative, event date and time, and the injured worker's details.</dd>
@@ -537,12 +539,14 @@
     <div class="info-grid cols-4">
       <div class="info-cell"><div class="kv"><span class="k">Employees:</span><input class="f-input f-employees" type="text"></div></div>
       <div class="info-cell"><div class="kv"><span class="k">Owner Type:</span><input class="f-input f-ownerType" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Migrant Labor:</span><input class="f-input f-migrant" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Migrant Labor:</span><input class="f-input f-migrant" type="text"></div>
+        <div class="kv"><span class="k">Union Status:</span><input class="f-input f-unionStatus" type="text"></div></div>
       <div class="info-cell"><div class="kv"><span class="k">Planning Guides:</span><input class="f-input f-planningGuides" type="text"></div></div>
     </div>
 
     <div class="info-grid">
-      <div class="info-cell"><div class="kv"><span class="k">Emphasis Programs:</span><textarea class="f-input f-emphasis" rows="1"></textarea></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Emphasis Programs:</span><textarea class="f-input f-emphasis" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Why No Inspection:</span><input class="f-input f-whyNoInspection" type="text"></div></div>
     </div>
 
     <div class="section violations-section">
@@ -645,6 +649,7 @@
       <div class="kv"><span class="k">Final Order Date:</span><input class="f-input" type="text" data-field="finalOrderDate" placeholder="MM/DD/YYYY"></div>
       <div class="kv"><span class="k">Prompted By:</span><input class="f-input" type="text" data-field="prompted"></div>
       <div class="kv"><span class="k">Hazard Category:</span><input class="f-input" type="text" data-field="hazcat"></div>
+      <div class="kv"><span class="k">Gravity (1-10):</span><input class="f-input" type="text" data-field="gravity"></div>
       <div class="kv"><span class="k">Emphasis Program:</span><input class="f-input" type="text" data-field="emphasis"></div>
       <div class="kv"><span class="k">Hazardous Substances:</span><input class="f-input" type="text" data-field="hazSubstances"></div>
     </div>
@@ -1058,6 +1063,8 @@
     setField(d.querySelector('.f-employees'), rec.employees);
     setField(d.querySelector('.f-ownerType'), rec.ownerType);
     setField(d.querySelector('.f-migrant'), rec.migrant);
+    setField(d.querySelector('.f-unionStatus'), rec.unionStatus);
+    setField(d.querySelector('.f-whyNoInspection'), rec.whyNoInspection);
     setField(d.querySelector('.f-planningGuides'), rec.planningGuides);
     setField(d.querySelector('.f-emphasis'), rec.emphasisPrograms);
 
