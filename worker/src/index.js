@@ -120,6 +120,26 @@ const LOOKUP_TABLES = {
 
 const PROG_TYPE = { N: 'NEP', L: 'LEP', S: 'Strategic Plan', P: 'Primary Emphasis' };
 
+/**
+ * Emphasis program codes. DOL publishes no lookup table for prog_value: the
+ * codes are set by each OSHA directive, so national ones repeat nationwide
+ * while local ones are regional. Add entries here as you meet them; anything
+ * unmapped still shows its raw code.
+ */
+const EMPHASIS_PROGRAM = {
+  'RCS-NEP': 'Respirable Crystalline Silica',
+  'WAREHOUSE23': 'Warehousing and Distribution Center Operations',
+  'T50WHH': 'Top 50 Workplace Health Hazards',
+  'CONSTR6': 'Construction (Region VI)'
+};
+
+const emphasisLabel = code => {
+  const key = String(code || '').trim();
+  if (!key) return '';
+  const name = EMPHASIS_PROGRAM[key.toUpperCase()];
+  return name ? `${name} (${key})` : key;
+};
+
 // Construction operation / cause of injury (code table OPER), from the OSHA data dictionary.
 const CONST_OPER = {
   1: "Backfilling and compacting",
@@ -467,7 +487,7 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
     emphasisPrograms: (emphasis || [])
       .map(e => {
         const label = PROG_TYPE[String(e.prog_type || '').trim().toUpperCase()] || e.prog_type || '';
-        const value = String(e.prog_value || '').trim();
+        const value = emphasisLabel(e.prog_value);
         return value ? (label ? `${label}: ${value}` : value) : label;
       })
       .filter(Boolean).join(' · '),
