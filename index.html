@@ -157,6 +157,13 @@
     border: 1px solid var(--line-strong); border-radius: 3px; padding: 3px 6px; width: 100%;
   }
   .f-input:focus { outline: 2px solid var(--focus); outline-offset: 1px; background: var(--bg); }
+  .f-input[readonly] {
+    background: transparent; border-color: transparent; padding-left: 0; cursor: default; color: var(--ink);
+  }
+  .f-input[readonly]:hover { background: var(--bg-sunken); }
+  tr.insp-row.from-api td .f-input[readonly] { padding-left: 0; }
+  .from-api .f-money-wrap .sign { color: var(--ink); }
+  [data-action="add-citation"][hidden] { display: none; }
   .f-input.f-num { font-family: var(--mono); text-align: right; }
   .f-input.f-sm { width: 90px; }
   .activity-link.f-sm { width: 110px; }
@@ -379,7 +386,7 @@
           <dt>Current Penalty Total</dt><dd>The inspection's current penalties, added up from its citations. Updates as citation penalties are edited.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
           <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
-          <dt>Emphasis Programs</dt><dd>National or local emphasis programs the inspection fell under, such as a fall-hazard or heat NEP. A targeted inspection rather than a random one.</dd>
+          <dt>Emphasis Programs</dt><dd>An emphasis program is a hazard OSHA has decided to go looking for, set out in a directive and worked through planned inspections. A value here means this inspection was targeted, not routine: OSHA arrived expecting to find that hazard in that industry. National Emphasis Programs run countrywide (silica, trenching, heat, warehousing); Local and Regional ones are set by an area office; Strategic Plan and Primary Emphasis codes mark OSHA's own priority work. For underwriting this is context the citation count alone does not give: a clean result under a targeted inspection carries more weight than a clean routine visit, and a cited one under a program that matches the account's own exposure is a stronger signal. Named programs beside the code are maintained by the business; an unrecognised code shows as published.</dd>
           <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount at the site, private or government employer, whether migrant labor was involved, and whether the workforce was represented.</dd>
           <dt>FAT/CAT</dt><dd>Fatality or catastrophe inspection. Citations tied to the accident sort to the top and carry the same marker.</dd>
           <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
@@ -1110,7 +1117,23 @@
     }
 
     hideEmptyFields(d);
+    lockRecord(summaryRow, d);
     applyApiData(summaryRow, { fatCat: rec.fatCat });
+  }
+
+  // Records that came from OSHA are read-only: the screen reports the official
+  // record, it does not amend it. Inspections added by hand stay editable.
+  function lockRecord(summaryRow, detailEl) {
+    summaryRow.classList.add('from-api');
+    detailEl.classList.add('from-api');
+    [summaryRow, detailEl].forEach(root => {
+      root.querySelectorAll('input, textarea').forEach(el => {
+        el.readOnly = true;
+        el.tabIndex = -1;
+      });
+    });
+    const add = detailEl.querySelector('[data-action="add-citation"]');
+    if (add) add.hidden = true;
   }
 
   // Fields with no data are hidden; the "Show empty fields" switch brings them back.
