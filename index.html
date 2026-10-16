@@ -107,17 +107,27 @@
   .info-badge[data-tip]:hover::after, .info-badge[data-tip]:focus-visible::after { opacity: 1; visibility: visible; }
 
   /* master field-help menu */
-  .tip-menu { position: relative; }
+  .tip-menu { position: relative; padding: 8px; margin: -8px; }
   .tip-menu-btn {
-    width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--bg-sunken);
+    width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--bg-sunken);
     color: var(--ink-soft); font-size: 12px; font-weight: 700; cursor: help; line-height: 1;
   }
   .tip-menu-btn:hover, .tip-menu:focus-within .tip-menu-btn { background: var(--badge-bg); color: var(--badge-ink); border-color: var(--badge-bg); }
   .tip-menu-panel {
-    position: absolute; right: 0; top: calc(100% + 6px); width: 340px; max-width: 90vw; z-index: 60;
+    position: absolute; right: 0; top: calc(100% + 10px); width: 920px; max-width: 94vw; max-height: 82vh; overflow-y: auto; z-index: 60;
     background: var(--bg); border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,0.14);
-    padding: 12px 14px; opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+    padding: 14px 16px; opacity: 0; visibility: hidden; transition: opacity 0.12s ease 0.25s, visibility 0s linear 0.37s;
   }
+  /* an invisible bridge so the pointer can travel from the button to the panel */
+  .tip-menu-panel::before { content: ''; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
+  .tip-menu:hover .tip-menu-panel, .tip-menu:focus-within .tip-menu-panel, .tip-menu.open .tip-menu-panel {
+    transition: opacity 0.12s ease 0.08s, visibility 0s;
+  }
+  /* two columns so the guide fits without scrolling */
+  .tip-menu-panel dl { columns: 2; column-gap: 28px; }
+  .tip-menu-panel dt { break-after: avoid; }
+  .tip-menu-panel dd { break-before: avoid; break-inside: avoid; margin-bottom: 2px; }
+  @media (max-width: 720px) { .tip-menu-panel dl { columns: 1; } }
   .tip-menu:hover .tip-menu-panel, .tip-menu:focus-within .tip-menu-panel, .tip-menu.open .tip-menu-panel { opacity: 1; visibility: visible; }
   .tip-menu-title { margin: 0 0 8px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
   .tip-menu-panel dl { margin: 0; font-size: 12px; line-height: 1.45; }
@@ -355,13 +365,36 @@
       <div class="tip-menu-panel" role="menu">
         <p class="tip-menu-title">Field guide</p>
         <dl>
+          <dt>Manual Search</dt><dd>Searches OSHA by establishment name across the last five calendar years. Partial names work.</dd>
           <dt>Underwriter Notes</dt><dd>Record your notes on any Serious, Willful, Repeat, and FAT/CAT's. Detail information from agent's or loss control.</dd>
-          <dt>Five Year History</dt><dd>Totals across all active inspections. Deleted inspections are excluded.</dd>
-          <dt>FAT/CAT</dt><dd>Flags a fatality or catastrophe inspection. Set from the OSHA data point.</dd>
-          <dt>Violation Items</dt><dd>One row per citation. Current and initial penalties roll up into Five Year History.</dd>
-          <dt>FTA Penalty</dt><dd>FTA = Penalty for Failure to Abate.</dd>
-          <dt>Cited standard details</dt><dd>The definition of the standard cited on the row above.</dd>
-          <dt>Investigation Summary</dt><dd>Incident narrative, keywords and the injured-worker detail for the investigated inspection.</dd>
+          <dt>Five Year History</dt><dd>Citation counts and penalty totals across all inspections shown. Deleted inspections are excluded.</dd>
+          <dt>Open / closed counts</dt><dd>An inspection with no close date is still open.</dd>
+          <dt>Show empty fields</dt><dd>Fields OSHA returned blank are hidden. Tick this to see them all, for manual entry.</dd>
+
+          <dt>Inspection row</dt><dd>Activity number, dates, state, citation counts and establishment name. Click the arrow to open the full record; click a column heading to sort.</dd>
+          <dt>FAT/CAT</dt><dd>Fatality or catastrophe inspection. Citations tied to the accident sort to the top and carry the same marker.</dd>
+          <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
+          <dt>Inspection Type / Scope / Safety-Health</dt><dd>Why the inspection happened, how much of the site it covered, and whether it was a safety or health inspection.</dd>
+          <dt>Employees / Owner Type / Migrant Labor</dt><dd>Headcount at the site, private or government employer, and whether migrant labor was involved.</dd>
+          <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and by industry.</dd>
+
+          <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other. Current and initial penalties roll up into Five Year History.</dd>
+          <dt>Initial vs Current Citation Type</dt><dd>What the citation was first issued as, and what it stands at now after any settlement or appeal.</dd>
+          <dt>Standard Cited</dt><dd>The OSHA standard behind the citation; the line underneath carries its text.</dd>
+          <dt>Issuance / Abatement Due / Contest Date</dt><dd>When it was issued, when the hazard had to be fixed, and the date the employer contested it, if they did.</dd>
+          <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
+          <dt>Latest Event</dt><dd>The most recent action on the citation, such as an informal or formal settlement.</dd>
+          <dt>Abatement Complete / FTA Penalty</dt><dd>Whether the hazard was fixed and how it was resolved if not. FTA = Penalty for Failure to Abate.</dd>
+          <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
+          <dt>Hazard Category / Hazardous Substances / Emphasis Program</dt><dd>The hazard involved, any substance codes recorded, and whether it fell under an emphasis program.</dd>
+
+          <dt>Related Activity</dt><dd>Other complaints, referrals, accidents or inspections linked to this one, flagged as safety or health.</dd>
+
+          <dt>Investigation Summary</dt><dd>Appears for accident inspections: the incident narrative, event date and time, and the injured worker's details.</dd>
+          <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
+          <dt>Injury Detail</dt><dd>Part of body, source, event type, human and environmental factors, fall distances and any substance involved.</dd>
+          <dt>Keywords</dt><dd>OSHA's own keywords for the incident.</dd>
+
           <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
         </dl>
       </div>
@@ -515,12 +548,11 @@
       <p class="section-title"><span class="title-left">Related Activity</span></p>
       <div class="table-scroll">
         <table class="related-table">
-          <colgroup><col style="width:30px"><col style="width:20%"><col style="width:20%"><col style="width:15%"><col style="width:15%"></colgroup>
+          <colgroup><col style="width:20%"><col style="width:20%"><col style="width:15%"><col style="width:15%"></colgroup>
           <thead>
             <tr>
-              <th>#</th>
-              <th>Type</th>
               <th>Activity #</th>
+              <th>Type</th>
               <th>Safety</th>
               <th>Health</th>
             </tr>
@@ -574,9 +606,9 @@
     <div class="table-scroll">
       <table class="viol-table">
         <colgroup>
-          <col style="width:62px"><col style="width:9%"><col style="width:7%"><col style="width:7%"><col style="width:13%">
-          <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%">
-          <col style="width:8%"><col>
+          <col style="width:62px"><col style="width:9%"><col style="width:7%"><col style="width:7%"><col style="width:14%">
+          <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:10%">
+          <col>
         </colgroup>
         <thead>
           <tr>
@@ -587,10 +619,9 @@
             <th>Standard Cited</th>
             <th>Issuance Date</th>
             <th>Abatement Due Date</th>
-            <th class="contest-col">Contest</th>
+            <th class="contest-col">Contest Date</th>
             <th class="num" data-csort="currentPenalty">Current Penalty <span class="sort-ind"></span></th>
             <th class="num" data-csort="initialPenalty">Initial Penalty <span class="sort-ind"></span></th>
-            <th class="num">FTA Penalty</th>
             <th>Latest Event</th>
           </tr>
         </thead>
@@ -606,7 +637,6 @@
             <td class="contest-col"><input class="f-input f-sm" type="text" data-field="contest" placeholder="MM/DD/YYYY"></td>
             <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="currentPenalty"></span></td>
             <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="initialPenalty"></span></td>
-            <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="ftaPenalty"></span></td>
             <td><input class="f-input f-sm" type="text" data-field="latestEvent"></td>
           </tr>
         </tbody>
@@ -617,6 +647,7 @@
     </div>
     <div class="cit-extra">
       <div class="kv"><span class="k">Abatement Complete:</span><input class="f-input" type="text" data-field="abateComplete"></div>
+      <div class="kv"><span class="k">FTA Penalty:</span><input class="f-input f-num" type="text" data-field="ftaPenalty"></div>
       <div class="kv"><span class="k">Final Order Date:</span><input class="f-input" type="text" data-field="finalOrderDate" placeholder="MM/DD/YYYY"></div>
       <div class="kv"><span class="k">Prompted By:</span><input class="f-input" type="text" data-field="prompted"></div>
       <div class="kv"><span class="k">Hazard Category:</span><input class="f-input" type="text" data-field="hazcat"></div>
@@ -628,29 +659,10 @@
 
 <template id="relatedRowTemplate">
   <tr class="related-row">
-    <td class="row-num"></td>
-    <td><input class="f-input f-sm" type="text" data-rel="type"></td>
     <td><input class="f-input f-sm" type="text" data-rel="activityNr"></td>
+    <td><input class="f-input f-sm" type="text" data-rel="type"></td>
     <td><input class="f-input f-sm" type="text" data-rel="safety"></td>
     <td><input class="f-input f-sm" type="text" data-rel="health"></td>
-  </tr>
-</template>
-
-<template id="citationDefTemplate">
-  <tr class="citation-def-row">
-    <td colspan="14">
-      <div class="cit-def">
-        <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
-      </div>
-      <div class="cit-extra">
-        <div class="kv"><span class="k">Abatement Complete:</span><input class="f-input" type="text" data-field="abateComplete"></div>
-        <div class="kv"><span class="k">Final Order Date:</span><input class="f-input" type="text" data-field="finalOrderDate" placeholder="MM/DD/YYYY"></div>
-        <div class="kv"><span class="k">Prompted By:</span><input class="f-input" type="text" data-field="prompted"></div>
-        <div class="kv"><span class="k">Hazard Category:</span><input class="f-input" type="text" data-field="hazcat"></div>
-        <div class="kv"><span class="k">Emphasis Program:</span><input class="f-input" type="text" data-field="emphasis"></div>
-        <div class="kv"><span class="k">Hazardous Substances:</span><input class="f-input" type="text" data-field="hazSubstances"></div>
-      </div>
-    </td>
   </tr>
 </template>
 
@@ -1083,9 +1095,8 @@
     });
 
     const relatedBody = d.querySelector('.related-body');
-    (rec.relatedActivity || []).forEach((rel, i) => {
+    (rec.relatedActivity || []).forEach(rel => {
       const row = relatedRowTmpl.content.cloneNode(true).querySelector('tr');
-      row.querySelector('.row-num').textContent = (i + 1) + '.';
       Object.keys(rel).forEach(k => setField(row.querySelector(`[data-rel="${k}"]`), rel[k]));
       relatedBody.appendChild(row);
     });
