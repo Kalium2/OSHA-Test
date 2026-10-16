@@ -275,7 +275,12 @@ const LOOKUP_TABLES = {
   fatalCause: 'fatality'     // fat_cause (code table CAUS)
 };
 
-const PROG_TYPE = { N: 'NEP', L: 'LEP', S: 'Strategic Plan', P: 'Primary Emphasis' };
+const PROG_TYPE = {
+  N: 'National Emphasis Program',
+  L: 'Local Emphasis Program',
+  S: 'Strategic Plan Code',
+  P: 'Primary Emphasis Program',
+};
 
 /**
  * Emphasis program codes. DOL publishes no lookup table for prog_value: the
@@ -294,7 +299,11 @@ const emphasisLabel = code => {
   const key = String(code || '').trim();
   if (!key) return '';
   const name = EMPHASIS_PROGRAM[key.toUpperCase()];
-  return name ? `${name} (${key})` : key;
+  if (name) return `${name} (${key})`;
+  // DOL stores these upper case; a single plain word reads better in title case
+  return /^[A-Z][A-Z\s]*$/.test(key)
+    ? key.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase())
+    : key;
 };
 
 // Construction operation / cause of injury (code table OPER), from the OSHA data dictionary.
