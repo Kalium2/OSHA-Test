@@ -58,6 +58,16 @@
 
   /* ---- top action bar ---- */
   .search-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  .estab-search-panel { border: 1px solid var(--line); border-radius: 4px; background: var(--bg); margin-bottom: 16px; }
+  .estab-search-panel > summary {
+    list-style: none; cursor: pointer; padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 700; color: var(--ink);
+  }
+  .estab-search-panel > summary::-webkit-details-marker { display: none; }
+  .estab-search-panel > summary .chev { font-size: 9px; color: var(--ink-faint); transition: transform 0.15s ease; }
+  .estab-search-panel[open] > summary .chev { transform: rotate(90deg); }
+  .estab-search-panel > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .estab-search-panel .estab-search { border: none; border-top: 1px solid var(--line); border-radius: 0; margin: 0; }
   .estab-search { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border: 1px solid var(--line); background: var(--bg-sunken); border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; }
   .estab-search label { font-size: 12px; font-weight: 700; color: var(--ink); }
   .estab-search input { font-family: var(--sans); font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg); color: var(--ink); }
@@ -205,6 +215,9 @@
   tr.citations-row > td { border-bottom: none; }
   tr.citation-def-row > td { padding-top: 0; padding-bottom: 8px; }
   .cit-def { display: flex; align-items: flex-start; gap: 8px; }
+  tr.citations-row.accident-related td { background: var(--danger-bg); }
+  tr.citations-row .row-num { white-space: nowrap; }
+  .cit-flag { display: block; width: fit-content; font-size: 9px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 1px 4px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.02em; white-space: nowrap; }
   .cit-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; margin-top: 6px; }
   .cit-extra .kv { margin: 0; }
   .cit-extra .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
@@ -335,11 +348,14 @@
     </div>
   </div>
 
-  <div class="estab-search">
-    <label for="estabName">Establishment name</label>
-    <input id="estabName" type="text" placeholder="e.g. ACME MANUFACTURING" autocomplete="off" spellcheck="false">
-    <button class="btn btn-primary" id="estabSearchBtn" type="button">Search</button>
-  </div>
+  <details class="estab-search-panel" id="manualSearchPanel">
+    <summary><span class="chev" aria-hidden="true">▶</span> Manual Search</summary>
+    <div class="estab-search">
+      <label for="estabName">Establishment name</label>
+      <input id="estabName" type="text" placeholder="e.g. ACME MANUFACTURING" autocomplete="off" spellcheck="false">
+      <button class="btn btn-primary" id="estabSearchBtn" type="button">Search</button>
+    </div>
+  </details>
 
   <div class="qrow" id="additionalDetails" style="margin-bottom:16px; border-top:1px solid var(--line);">
     <div class="qrow-head">
@@ -460,7 +476,7 @@
       <div class="info-cell"><div class="kv"><span class="k">Planning Guides:</span><input class="f-input f-planningGuides" type="text"></div></div>
     </div>
 
-    <div class="section">
+    <div class="section violations-section">
       <p class="section-title">
         <span class="title-left">Violation Items</span>
         <button class="btn btn-ghost btn-sm" data-action="add-citation" type="button">+ Add citation</button>
@@ -468,7 +484,7 @@
       <div class="table-scroll">
         <table class="viol-table">
           <colgroup>
-            <col style="width:30px"><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:8%">
+            <col style="width:62px"><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:8%">
             <col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:8%">
             <col style="width:9%"><col><col style="width:10%"><col style="width:26px">
           </colgroup>
@@ -724,7 +740,10 @@
   }
   function renumberCitations(detailEl) {
     detailEl.querySelectorAll('.citations-body tr.citations-row').forEach((row, i) => {
-      row.querySelector('.row-num').textContent = (i + 1) + '.';
+      const cell = row.querySelector('.row-num');
+      const flag = cell.querySelector('.cit-flag');   // keep any FAT/CAT marker
+      cell.textContent = (i + 1) + '.';
+      if (flag) cell.appendChild(flag);
     });
   }
   function toggleNoCitations(detailEl) {
@@ -984,9 +1003,21 @@
         setField(el, item[k]);
       });
       setField(extraRow && extraRow.querySelector('.f-stdDefinition'), item.standardDetails);
+      if (item.accidentRelated) {
+        row.classList.add('accident-related');
+        const tag = document.createElement('span');
+        tag.className = 'cit-flag';
+        tag.textContent = 'FAT/CAT';
+        row.querySelector('.row-num').appendChild(tag);
+      }
     });
 
+    // Sections only appear when the inspection actually has that data.
+    const hasViolations = (rec.violationItems || []).length > 0;
+    d.querySelector('.violations-section').style.display = hasViolations ? '' : 'none';
+
     const inv = rec.investigation;
+    d.querySelector('.investigation-summary').style.display = inv ? '' : 'none';
     if (inv) {
       setField(d.querySelector('.f-invNr'), inv.investigationNr);
       setField(d.querySelector('.f-invEvent'), inv.event);
@@ -1094,7 +1125,10 @@
   // A ?name= in the URL prefills and runs the search.
   (function prefillFromUrl() {
     const q = new URLSearchParams(location.search);
-    if (q.get('name')) estabName.value = q.get('name');
+    if (q.get('name')) {
+      estabName.value = q.get('name');
+      document.getElementById('manualSearchPanel').open = true;
+    }
   })();
 
   window.violationsDesk.searchEstablishment = searchEstablishment;
