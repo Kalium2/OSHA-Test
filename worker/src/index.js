@@ -30,10 +30,15 @@ const VIOL_TYPE = { S: 'Serious', W: 'Willful', R: 'Repeat', O: 'Other', U: 'Unc
 const DEGREE_OF_INJ = { 1: 'Fatality', 2: 'Hospitalized injury', 3: 'Non-hospitalized injury' };
 const OWNER_TYPE = { A: 'Private', B: 'Local government', C: 'State government', D: 'Federal' };
 const ABATE_COMPLETE = {
-  Q: 'Quick fix', X: 'Abatement completed', I: 'Corrected during inspection',
-  E: 'Not completed — employer out of business', W: 'Not changed — worksite changed',
-  S: 'Not completed — solicitor advised', A: 'Not completed — AD discretion'
+  Q: 'Quick Fix', 1: 'Quick Fix',
+  X: 'Abatement Completed', 2: 'Abatement Completed',
+  I: 'Corrected During Inspection', 3: 'Corrected During Inspection',
+  E: 'Not Completed - Employer out of business', 4: 'Not Completed - Employer out of business',
+  W: 'Not Completed - Worksite changed', 5: 'Not Completed - Worksite changed',
+  S: 'Not Completed - Solicitor advised', 6: 'Not Completed - Solicitor advised',
+  A: 'Not completed - AD discretion', 7: 'Not completed - AD discretion'
 };
+const REL_TYPE = { C: 'Complaint', I: 'Inspection', R: 'Referral', A: 'Accident' };
 const REC = { A: 'Accident', C: 'Complaint', I: 'Imminent danger', R: 'Referral', V: 'Variance' };
 const TASK_ASSIGNED = { 1: 'Regularly assigned', 2: 'Not regularly assigned' };
 const HIST_EVENT = {
@@ -105,10 +110,12 @@ async function loadInspections(env, inspections) {
   if (!inspections.length) return [];
   const ids = inspections.map(i => String(i.activity_nr));
 
-  const [violations, events, injuries] = await Promise.all([
+  const [violations, events, injuries, related, genDuty] = await Promise.all([
     dol(env, 'violation', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
     dol(env, 'violation_event', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
-    dol(env, 'accident_injury', inList('rel_insp_nr', ids), { limit: 200 }).catch(() => [])
+    dol(env, 'accident_injury', inList('rel_insp_nr', ids), { limit: 200 }).catch(() => []),
+    dol(env, 'related_activity', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
+    dol(env, 'violation_gen_duty_std', inList('activity_nr', ids), { limit: 200 }).catch(() => [])
   ]);
 
   // Accident narratives, in one more call, keyed by the injuries' summary numbers.
@@ -134,6 +141,8 @@ async function loadInspections(env, inspections) {
   const eByInsp = by(events, 'activity_nr');
   const iByInsp = by(injuries, 'rel_insp_nr');
   const aBySummary = by(accidents, 'summary_nr');
+  const relByInsp = by(related, 'activity_nr');
+  const gdByInsp = by(genDuty, 'activity_nr');
   const absBySummary = by(abstracts, 'summary_nr');
 
   return inspections.map(insp => {
@@ -146,7 +155,9 @@ async function loadInspections(env, inspections) {
       events: eByInsp.get(id) || [],
       injuries: myInjuries,
       accident: summaryNr ? (aBySummary.get(String(summaryNr)) || [])[0] || null : null,
-      abstractLines: summaryNr ? (absBySummary.get(String(summaryNr)) || []) : []
+      abstractLines: summaryNr ? (absBySummary.get(String(summaryNr)) || []) : [],
+      related: relByInsp.get(id) || [],
+      genDuty: gdByInsp.get(id) || []
     };
   });
 }
@@ -165,6 +176,17 @@ function latestEventFor(citationId, events) {
     .sort((a, b) => String(a.hist_date).localeCompare(String(b.hist_date)));
   const last = mine[mine.length - 1];
   return last ? (HIST_EVENT[last.hist_event] || last.hist_event) : '';
+}
+
+// Street on one line, "City, ST ZIP" on the next. A state with no city is not
+// an address, so it is left out rather than shown alone.
+function addressBlock(street, city, state, zip) {
+  const lines = [];
+  if (String(street || '').trim()) lines.push(String(street).trim());
+  if (String(city || '').trim()) {
+    lines.push([String(city).trim(), state].filter(Boolean).join(', ') + (zip ? ' ' + zip : ''));
+  }
+  return lines.join('\n');
 }
 
 const flag = v => (String(v || '').trim().toUpperCase() === 'X' ? 'Yes' : '');
@@ -214,6 +236,28 @@ function bySeverity(a, b) {
   return year(b.dateOpened).localeCompare(year(a.dateOpened));
 }
 
+// violation_gen_duty_std holds the cited standard's text, one row per line,
+// keyed by citation. Lines join in line_nr order.
+function genDutyText(rows, citationId) {
+  return (rows || [])
+    .filter(r => String(r.citation_id) === String(citationId))
+    .slice()
+    .sort((a, b) => Number(a.line_nr) - Number(b.line_nr))
+    .map(r => String(r.line_text || '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+}
+
+// The initial citation type comes from the earliest event's hist_vtype.
+function initialTypeFrom(events, citationId) {
+  const mine = (events || [])
+    .filter(e => String(e.citation_id) === String(citationId) && e.hist_vtype)
+    .sort((a, b) => String(a.hist_date).localeCompare(String(b.hist_date)));
+  const first = mine[0];
+  return first ? (VIOL_TYPE[String(first.hist_vtype).trim().toUpperCase()] || first.hist_vtype) : '';
+}
+
 // accident_abstract holds the narrative split across numbered lines.
 function abstractText(lines, accident) {
   const text = (lines || [])
@@ -226,7 +270,7 @@ function abstractText(lines, accident) {
   return text || accident?.abstract_text || '';
 }
 
-export function mapRecord({ insp, violations, events, injuries, accident, abstractLines }) {
+export function mapRecord({ insp, violations, events, injuries, accident, abstractLines, related, genDuty }) {
   const live = (violations || []).filter(v => v.delete_flag !== 'D');
   const count = t => live.filter(v => v.viol_type === t).length;
   const sum = f => live.reduce((n, v) => n + (parseFloat(v[f]) || 0), 0);
@@ -238,14 +282,13 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
     activityNr: String(insp.activity_nr),
     dateOpened: usDate(insp.open_date),
     caseStatus: insp.close_case_date ? 'CLOSED' : 'OPEN',
+    dateClosed: usDate(insp.close_case_date),
     state: insp.site_state,
     establishment: insp.estab_name,
     fatCat,
 
-    siteAddress: [insp.site_address, [insp.site_city, insp.site_state].filter(Boolean).join(', ') +
-      (insp.site_zip ? ' ' + insp.site_zip : '')].filter(s => s && s.trim()).join('\n'),
-    mailingAddress: [insp.mail_street, [insp.mail_city, insp.mail_state].filter(Boolean).join(', ') +
-      (insp.mail_zip ? ' ' + insp.mail_zip : '')].filter(s => s && s.trim()).join('\n'),
+    siteAddress: addressBlock(insp.site_address, insp.site_city, insp.site_state, insp.site_zip),
+    mailingAddress: addressBlock(insp.mail_street, insp.mail_city, insp.mail_state, insp.mail_zip),
     naics: insp.naics_code,
     inspectionType: INSP_TYPE[insp.insp_type] || insp.insp_type || '',
     scope: INSP_SCOPE[insp.insp_scope] || insp.insp_scope || '',
@@ -269,7 +312,8 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       return r || (parseFloat(y.current_penalty) || 0) - (parseFloat(x.current_penalty) || 0);
     }).map(v => ({
       citationId: v.citation_id,
-      initialCitationType: VIOL_TYPE[v.initial_viol_type] || v.initial_viol_type || '',
+      initialCitationType: initialTypeFrom(events, v.citation_id)
+        || VIOL_TYPE[v.initial_viol_type] || v.initial_viol_type || '',
       citationType: VIOL_TYPE[v.viol_type] || v.viol_type || '',
       standardCited: v.standard,
       issuanceDate: usDate(v.issuance_date),
@@ -279,15 +323,21 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       ftaPenalty: v.fta_penalty,
       contest: usDate(v.contest_date),
       latestEvent: latestEventFor(v.citation_id, events || []),
-      note: '',
-      standardDetails: '',  // fill from your standards data source
-      abateComplete: ABATE_COMPLETE[v.abate_complete] || v.abate_complete || '',
+      standardDetails: genDutyText(genDuty, v.citation_id),
+      abateComplete: ABATE_COMPLETE[String(v.abate_complete || '').trim().toUpperCase()] || v.abate_complete || '',
       finalOrderDate: usDate(v.final_order_date),
       prompted: REC[v.rec] || v.rec || '',
       hazcat: v.hazcat || '',
       emphasis: flag(v.emphasis),
       hazSubstances: hazSubs(v),
       accidentRelated: isAccidentCitation(v)
+    })),
+
+    relatedActivity: (related || []).map(r => ({
+      type: REL_TYPE[String(r.rel_type || '').trim().toUpperCase()] || r.rel_type || '',
+      activityNr: r.rel_act_nr ? String(r.rel_act_nr) : '',
+      safety: flag(r.rel_safety),
+      health: flag(r.rel_health)
     })),
 
     investigation: (accident || (injuries || []).length) ? {
