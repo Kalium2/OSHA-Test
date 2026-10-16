@@ -596,8 +596,8 @@
     <div class="table-scroll">
       <table class="viol-table">
         <colgroup>
-          <col style="width:62px"><col style="width:9%"><col style="width:7%"><col style="width:7%"><col style="width:14%">
-          <col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:10%">
+          <col style="width:62px"><col style="width:10%"><col style="width:8%"><col style="width:8%"><col style="width:16%">
+          <col style="width:10%"><col style="width:10%"><col style="width:11%"><col style="width:11%">
           <col>
         </colgroup>
         <thead>
@@ -608,7 +608,6 @@
             <th data-csort="citationType">Current Citation Type <span class="sort-ind"></span></th>
             <th>Standard Cited</th>
             <th>Issuance Date</th>
-            <th>Abatement Due Date</th>
             <th class="contest-col">Contest Date</th>
             <th class="num" data-csort="currentPenalty">Current Penalty <span class="sort-ind"></span></th>
             <th class="num" data-csort="initialPenalty">Initial Penalty <span class="sort-ind"></span></th>
@@ -623,7 +622,6 @@
             <td><input class="f-input f-sm" type="text" data-field="citationType"></td>
             <td><textarea class="f-input f-sm f-standardCited" rows="1" data-field="standardCited"></textarea></td>
             <td><input class="f-input f-sm" type="text" data-field="issuanceDate" placeholder="MM/DD/YYYY"></td>
-            <td><input class="f-input f-sm" type="text" data-field="abatementDueDate" placeholder="MM/DD/YYYY"></td>
             <td class="contest-col"><input class="f-input f-sm" type="text" data-field="contest" placeholder="MM/DD/YYYY"></td>
             <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="currentPenalty"></span></td>
             <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="initialPenalty"></span></td>
@@ -636,6 +634,7 @@
       <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
     </div>
     <div class="cit-extra">
+      <div class="kv"><span class="k">Abatement Due Date:</span><input class="f-input" type="text" data-field="abatementDueDate" placeholder="MM/DD/YYYY"></div>
       <div class="kv"><span class="k">Abatement Complete:</span><input class="f-input" type="text" data-field="abateComplete"></div>
       <div class="kv"><span class="k">FTA Penalty:</span><input class="f-input f-num" type="text" data-field="ftaPenalty"></div>
       <div class="kv"><span class="k">Final Order Date:</span><input class="f-input" type="text" data-field="finalOrderDate" placeholder="MM/DD/YYYY"></div>
