@@ -38,7 +38,6 @@ const ABATE_COMPLETE = {
   S: 'Not Completed - Solicitor advised', 6: 'Not Completed - Solicitor advised',
   A: 'Not completed - AD discretion', 7: 'Not completed - AD discretion'
 };
-const REL_TYPE = { C: 'Complaint', I: 'Inspection', R: 'Referral', A: 'Accident' };
 const REC = { A: 'Accident', C: 'Complaint', I: 'Imminent danger', R: 'Referral', V: 'Variance' };
 const TASK_ASSIGNED = { 1: 'Regularly assigned', 2: 'Not regularly assigned' };
 const HIST_EVENT = {
@@ -49,7 +48,7 @@ const HIST_EVENT = {
 };
 
 // ---------- DOL API ----------
-async function dol(env, table, filterObject, { limit = 200, offset = 0 } = {}) {
+async function dol(env, table, filterObject, { limit = 200, offset = 0, cacheTtl = 900 } = {}) {
   const url = new URL(`${BASE}/${table}/json`);
   url.searchParams.set('limit', String(limit));
   url.searchParams.set('offset', String(offset));
@@ -59,7 +58,7 @@ async function dol(env, table, filterObject, { limit = 200, offset = 0 } = {}) {
 
   const res = await fetch(url, {
     headers: { 'User-Agent': 'violations-desk/1.0' },
-    cf: { cacheTtl: 900, cacheEverything: true }   // DOL data changes daily at most
+    cf: { cacheTtl, cacheEverything: true }   // DOL data changes daily at most
   });
   if (!res.ok) {
     const body = await res.text();
@@ -99,6 +98,48 @@ async function searchInspections(env, { name, state, since, limit = 25 }) {
   return dol(env, 'inspection', { and: conds }, { limit: Math.min(limit, 200) });
 }
 
+/**
+ * DOL publishes the IMIS code tables alongside the data. Each row carries the
+ * numeric code (accident_number) and its plain text (accident_value), so the
+ * UI can show "Fracture" instead of 10. Cached hard at the edge: these change
+ * about never.
+ */
+const LOOKUP_TABLES = {
+  nature: 'injury',          // nature_of_inj
+  bodyPart: 'body_part',     // part_of_body
+  source: 'injury_source',   // src_of_injury
+  eventType: 'event_type',   // event_type
+  human: 'human',            // hum_factor
+  environmental: 'environmental', // evn_factor
+  task: 'task',              // task_assigned
+  occupation: 'occupation',  // occ_code
+  degree: 'degree_injury'    // degree_of_inj
+};
+
+async function loadLookups(env) {
+  const names = Object.keys(LOOKUP_TABLES);
+  const results = await Promise.all(names.map(n =>
+    dol(env, LOOKUP_TABLES[n], null, { limit: 1000, cacheTtl: 604800 }).catch(() => [])
+  ));
+  const out = {};
+  names.forEach((n, i) => {
+    const m = new Map();
+    (results[i] || []).forEach(r => {
+      const code = r.accident_number ?? r.accident_code;
+      if (code !== undefined && code !== null) m.set(String(code).trim(), String(r.accident_value || '').trim());
+    });
+    out[n] = m;
+  });
+  return out;
+}
+
+// Plain text when we have it; otherwise the raw code, never a blank.
+const decode = (lookups, name, code) => {
+  if (code === null || code === undefined || String(code).trim() === '') return '';
+  const key = String(code).trim();
+  return (lookups && lookups[name] && lookups[name].get(key)) || key;
+};
+
 const inList = (field, values) => ({ and: [{ field, operator: 'in', value: values }] });
 
 /**
@@ -110,11 +151,10 @@ async function loadInspections(env, inspections) {
   if (!inspections.length) return [];
   const ids = inspections.map(i => String(i.activity_nr));
 
-  const [violations, events, injuries, related, genDuty] = await Promise.all([
+  const [violations, events, injuries, genDuty] = await Promise.all([
     dol(env, 'violation', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
     dol(env, 'violation_event', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
     dol(env, 'accident_injury', inList('rel_insp_nr', ids), { limit: 200 }).catch(() => []),
-    dol(env, 'related_activity', inList('activity_nr', ids), { limit: 200 }).catch(() => []),
     dol(env, 'violation_gen_duty_std', inList('activity_nr', ids), { limit: 200 }).catch(() => [])
   ]);
 
@@ -141,9 +181,11 @@ async function loadInspections(env, inspections) {
   const eByInsp = by(events, 'activity_nr');
   const iByInsp = by(injuries, 'rel_insp_nr');
   const aBySummary = by(accidents, 'summary_nr');
-  const relByInsp = by(related, 'activity_nr');
   const gdByInsp = by(genDuty, 'activity_nr');
   const absBySummary = by(abstracts, 'summary_nr');
+
+  // Code tables, fetched once per request and only when there is an injury to decode.
+  const lookups = injuries.length ? await loadLookups(env) : null;
 
   return inspections.map(insp => {
     const id = String(insp.activity_nr);
@@ -156,7 +198,7 @@ async function loadInspections(env, inspections) {
       injuries: myInjuries,
       accident: summaryNr ? (aBySummary.get(String(summaryNr)) || [])[0] || null : null,
       abstractLines: summaryNr ? (absBySummary.get(String(summaryNr)) || []) : [],
-      related: relByInsp.get(id) || [],
+      lookups,
       genDuty: gdByInsp.get(id) || []
     };
   });
@@ -270,7 +312,7 @@ function abstractText(lines, accident) {
   return text || accident?.abstract_text || '';
 }
 
-export function mapRecord({ insp, violations, events, injuries, accident, abstractLines, related, genDuty }) {
+export function mapRecord({ insp, violations, events, injuries, accident, abstractLines, genDuty, lookups }) {
   const live = (violations || []).filter(v => v.delete_flag !== 'D');
   const count = t => live.filter(v => v.viol_type === t).length;
   const sum = f => live.reduce((n, v) => n + (parseFloat(v[f]) || 0), 0);
@@ -333,13 +375,6 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       accidentRelated: isAccidentCitation(v)
     })),
 
-    relatedActivity: (related || []).map(r => ({
-      type: REL_TYPE[String(r.rel_type || '').trim().toUpperCase()] || r.rel_type || '',
-      activityNr: r.rel_act_nr ? String(r.rel_act_nr) : '',
-      safety: flag(r.rel_safety),
-      health: flag(r.rel_health)
-    })),
-
     investigation: (accident || (injuries || []).length) ? {
       investigationNr: accident?.summary_nr ?? injuries[0]?.summary_nr ?? '',
       event: usDate(accident?.event_date),
@@ -349,16 +384,17 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
       injured: (injuries || []).map(i => ({
         inspection: String(i.rel_insp_nr ?? ''),
         age: i.age, sex: i.sex,
-        degreeOfInjury: DEGREE_OF_INJ[Number(i.degree_of_inj)] || i.degree_of_inj || '',
-        // The codes below are OSHA lookup values. Add tables here to show labels.
-        natureOfInjury: i.nature_of_inj ?? '',   // table IN
-        occupation: i.occ_code ?? '',            // table OCC
-        partOfBody: i.part_of_body ?? '',        // table BD
-        sourceOfInjury: i.src_of_injury ?? '',   // table SO
-        eventType: i.event_type ?? '',           // table FT
-        humanFactor: i.hum_factor ?? '',         // table HU
-        environmentalFactor: i.evn_factor ?? '', // table EN
-        taskAssigned: TASK_ASSIGNED[Number(i.task_assigned)] || '',
+        degreeOfInjury: decode(lookups, 'degree', i.degree_of_inj)
+          || DEGREE_OF_INJ[Number(i.degree_of_inj)] || '',
+        natureOfInjury: decode(lookups, 'nature', i.nature_of_inj),
+        occupation: decode(lookups, 'occupation', i.occ_code),
+        partOfBody: decode(lookups, 'bodyPart', i.part_of_body),
+        sourceOfInjury: decode(lookups, 'source', i.src_of_injury),
+        eventType: decode(lookups, 'eventType', i.event_type),
+        humanFactor: decode(lookups, 'human', i.hum_factor),
+        environmentalFactor: decode(lookups, 'environmental', i.evn_factor),
+        taskAssigned: decode(lookups, 'task', i.task_assigned)
+          || TASK_ASSIGNED[Number(i.task_assigned)] || '',
         hazardousSubstance: i.hazsub ?? '',
         fallDistance: i.fall_distance ?? '',
         fallHeight: i.fall_ht ?? ''
