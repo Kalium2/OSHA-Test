@@ -28,6 +28,14 @@ const INSP_SCOPE = { A: 'Complete', B: 'Partial', C: 'Records only', D: 'No insp
 const SAFETY_HLTH = { S: 'Safety', H: 'Health' };
 const VIOL_TYPE = { S: 'Serious', W: 'Willful', R: 'Repeat', O: 'Other', U: 'Unclassified' };
 const DEGREE_OF_INJ = { 1: 'Fatality', 2: 'Hospitalized injury', 3: 'Non-hospitalized injury' };
+const OWNER_TYPE = { A: 'Private', B: 'Local government', C: 'State government', D: 'Federal' };
+const ABATE_COMPLETE = {
+  Q: 'Quick fix', X: 'Abatement completed', I: 'Corrected during inspection',
+  E: 'Not completed — employer out of business', W: 'Not changed — worksite changed',
+  S: 'Not completed — solicitor advised', A: 'Not completed — AD discretion'
+};
+const REC = { A: 'Accident', C: 'Complaint', I: 'Imminent danger', R: 'Referral', V: 'Variance' };
+const TASK_ASSIGNED = { 1: 'Regularly assigned', 2: 'Not regularly assigned' };
 const HIST_EVENT = {
   Z: 'Issued', P: 'Petition to modify abatement', I: 'Informal settlement', A: 'Amendment',
   W: 'Employer withdrew', D: 'Government dismissed', L: 'State settlement', Y: 'State decision',
@@ -100,9 +108,13 @@ async function loadInspections(env, inspections) {
 
   // Accident narratives, in one more call, keyed by the injuries' summary numbers.
   const summaryNrs = [...new Set(injuries.map(i => String(i.summary_nr)).filter(Boolean))];
-  const accidents = summaryNrs.length
-    ? await dol(env, 'accident', inList('summary_nr', summaryNrs), { limit: 200 }).catch(() => [])
-    : [];
+  // The narrative lives in accident_abstract, one row per line of text.
+  const [accidents, abstracts] = summaryNrs.length
+    ? await Promise.all([
+        dol(env, 'accident', inList('summary_nr', summaryNrs), { limit: 200 }).catch(() => []),
+        dol(env, 'accident_abstract', inList('summary_nr', summaryNrs), { limit: 200 }).catch(() => [])
+      ])
+    : [[], []];
 
   const by = (rows, field) => {
     const m = new Map();
@@ -117,6 +129,7 @@ async function loadInspections(env, inspections) {
   const eByInsp = by(events, 'activity_nr');
   const iByInsp = by(injuries, 'rel_insp_nr');
   const aBySummary = by(accidents, 'summary_nr');
+  const absBySummary = by(abstracts, 'summary_nr');
 
   return inspections.map(insp => {
     const id = String(insp.activity_nr);
@@ -127,7 +140,8 @@ async function loadInspections(env, inspections) {
       violations: vByInsp.get(id) || [],
       events: eByInsp.get(id) || [],
       injuries: myInjuries,
-      accident: summaryNr ? (aBySummary.get(String(summaryNr)) || [])[0] || null : null
+      accident: summaryNr ? (aBySummary.get(String(summaryNr)) || [])[0] || null : null,
+      abstractLines: summaryNr ? (absBySummary.get(String(summaryNr)) || []) : []
     };
   });
 }
@@ -148,7 +162,37 @@ function latestEventFor(citationId, events) {
   return last ? (HIST_EVENT[last.hist_event] || last.hist_event) : '';
 }
 
-export function mapRecord({ insp, violations, events, injuries, accident }) {
+const flag = v => (String(v || '').trim().toUpperCase() === 'X' ? 'Yes' : '');
+
+// The six planning-guide flags read better as one line than six empty boxes.
+function planningGuides(insp) {
+  const safety = [['Manufacturing', insp.safety_manuf], ['Construction', insp.safety_const], ['Maritime', insp.safety_marit]]
+    .filter(([, v]) => flag(v)).map(([k]) => k);
+  const health = [['Manufacturing', insp.health_manuf], ['Construction', insp.health_const], ['Maritime', insp.health_marit]]
+    .filter(([, v]) => flag(v)).map(([k]) => k);
+  const parts = [];
+  if (safety.length) parts.push(`Safety: ${safety.join(', ')}`);
+  if (health.length) parts.push(`Health: ${health.join(', ')}`);
+  return parts.join(' · ');
+}
+
+// hazsub1..hazsub5 collapse into one field.
+const hazSubs = v => [v.hazsub1, v.hazsub2, v.hazsub3, v.hazsub4, v.hazsub5]
+  .map(x => String(x || '').trim()).filter(Boolean).join(', ');
+
+// accident_abstract holds the narrative split across numbered lines.
+function abstractText(lines, accident) {
+  const text = (lines || [])
+    .slice()
+    .sort((a, b) => Number(a.line_nr) - Number(b.line_nr))
+    .map(l => (l.abstract_text || '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  return text || accident?.abstract_text || '';
+}
+
+export function mapRecord({ insp, violations, events, injuries, accident, abstractLines }) {
   const live = (violations || []).filter(v => v.delete_flag !== 'D');
   const count = t => live.filter(v => v.viol_type === t).length;
   const sum = f => live.reduce((n, v) => n + (parseFloat(v[f]) || 0), 0);
@@ -173,6 +217,10 @@ export function mapRecord({ insp, violations, events, injuries, accident }) {
     scope: INSP_SCOPE[insp.insp_scope] || insp.insp_scope || '',
     safetyHealth: SAFETY_HLTH[insp.safety_hlth] || insp.safety_hlth || '',
     advancedNotice: insp.adv_notice || '',
+    employees: insp.nr_in_estab || '',
+    ownerType: OWNER_TYPE[insp.owner_type] || insp.owner_type || '',
+    migrant: flag(insp.migrant),
+    planningGuides: planningGuides(insp),
 
     counts: {
       serious: count('S'), willful: count('W'), repeat: count('R'),
@@ -193,20 +241,37 @@ export function mapRecord({ insp, violations, events, injuries, accident }) {
       contest: usDate(v.contest_date),
       latestEvent: latestEventFor(v.citation_id, events || []),
       note: '',
-      standardDetails: ''   // fill from your standards data source
+      standardDetails: '',  // fill from your standards data source
+      abateComplete: ABATE_COMPLETE[v.abate_complete] || v.abate_complete || '',
+      finalOrderDate: usDate(v.final_order_date),
+      prompted: REC[v.rec] || v.rec || '',
+      hazcat: v.hazcat || '',
+      emphasis: flag(v.emphasis),
+      hazSubstances: hazSubs(v)
     })),
 
     investigation: (accident || (injuries || []).length) ? {
       investigationNr: accident?.summary_nr ?? injuries[0]?.summary_nr ?? '',
       event: usDate(accident?.event_date),
-      narrative: accident?.abstract_text ?? '',
+      eventTime: accident?.event_time ?? '',
+      narrative: abstractText(abstractLines, accident),
       keywords: accident?.event_keyword ?? '',
       injured: (injuries || []).map(i => ({
         inspection: String(i.rel_insp_nr ?? ''),
         age: i.age, sex: i.sex,
         degreeOfInjury: DEGREE_OF_INJ[Number(i.degree_of_inj)] || i.degree_of_inj || '',
-        natureOfInjury: i.nature_of_inj,   // numeric code (OSHA table IN)
-        occupation: i.occ_code             // numeric code (OSHA table OCC)
+        // The codes below are OSHA lookup values. Add tables here to show labels.
+        natureOfInjury: i.nature_of_inj ?? '',   // table IN
+        occupation: i.occ_code ?? '',            // table OCC
+        partOfBody: i.part_of_body ?? '',        // table BD
+        sourceOfInjury: i.src_of_injury ?? '',   // table SO
+        eventType: i.event_type ?? '',           // table FT
+        humanFactor: i.hum_factor ?? '',         // table HU
+        environmentalFactor: i.evn_factor ?? '', // table EN
+        taskAssigned: TASK_ASSIGNED[Number(i.task_assigned)] || '',
+        hazardousSubstance: i.hazsub ?? '',
+        fallDistance: i.fall_distance ?? '',
+        fallHeight: i.fall_ht ?? ''
       }))
     } : null
   };
