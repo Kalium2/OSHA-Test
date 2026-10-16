@@ -63,8 +63,6 @@
   .estab-search input { font-family: var(--sans); font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg); color: var(--ink); }
   .estab-search input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
   #estabName { flex: 1 1 260px; min-width: 180px; }
-  #estabState { width: 54px; text-transform: uppercase; }
-  #estabYears { width: 64px; }
   .load-status { font-size: 12px; color: var(--ink-soft); }
   .load-status.error { color: var(--danger); font-weight: 600; }
   .osha-link { margin: 0 auto; color: var(--link); font-size: 12.5px; font-weight: 600; text-decoration: none; }
@@ -188,6 +186,7 @@
   .info-grid.cols-3 { grid-template-columns: 1.3fr 1fr 1fr; }
   .info-grid.cols-2 { grid-template-columns: 1fr 1fr; }
   .info-grid.cols-3-even { grid-template-columns: repeat(3, 1fr); }
+  .info-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
   .info-grid.cols-addr { grid-template-columns: 1.6fr 1.6fr 1fr; }
   .info-cell { padding: 8px 12px; border-right: 1px solid var(--line); font-size: 12.5px; }
   .info-cell:last-child { border-right: none; }
@@ -206,16 +205,15 @@
   tr.citations-row > td { border-bottom: none; }
   tr.citation-def-row > td { padding-top: 0; padding-bottom: 8px; }
   .cit-def { display: flex; align-items: flex-start; gap: 8px; }
+  .cit-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; margin-top: 6px; }
+  .cit-extra .kv { margin: 0; }
+  .cit-extra .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
+  .record-detail .cit-extra .f-input { width: 100%; font-size: 11.5px; background: var(--bg); }
   .record-detail td textarea.f-stdDefinition { flex: 1 1 auto; min-height: 0; display: block; font-size: 12px; }
 
   .investigation-summary { padding: 12px 16px; border-bottom: 1px solid var(--line); }
   .inv-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .inv-title { font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; }
-  .inv-badge {
-    font-size: 9.5px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg);
-    padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em;
-  }
-  .inv-badge[hidden] { display: none; }
   .inv-meta-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; font-size: 12.5px; margin-bottom: 10px; }
   .inv-meta-row .k { font-weight: 700; color: var(--ink); margin-right: 6px; }
   .inv-meta-row .static-text { color: var(--ink); }
@@ -223,6 +221,11 @@
   .inv-keywords-row { display: flex; align-items: center; gap: 6px; font-size: 12.5px; margin-top: 12px; }
   .inv-keywords-row .k { font-weight: 700; color: var(--ink); }
   .inv-subheading { font-size: 12.5px; font-weight: 700; color: var(--ink); margin: 0 0 8px; }
+  .inv-detail-heading { margin-top: 12px; }
+  .inv-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; }
+  .inv-detail-grid .kv { margin: 0; }
+  .inv-detail-grid .k { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 2px; }
+  .inv-detail-grid .f-input { background: var(--bg); font-size: 11.5px; }
 
   .section { padding: 10px 16px; border-bottom: 1px solid var(--line); }
   .section:last-child { border-bottom: none; }
@@ -335,10 +338,6 @@
   <div class="estab-search">
     <label for="estabName">Establishment name</label>
     <input id="estabName" type="text" placeholder="e.g. ACME MANUFACTURING" autocomplete="off" spellcheck="false">
-    <label for="estabState">State</label>
-    <input id="estabState" type="text" maxlength="2" placeholder="CA" autocomplete="off">
-    <label for="estabYears">Years back</label>
-    <input id="estabYears" type="number" min="1" max="30" value="5">
     <button class="btn btn-primary" id="estabSearchBtn" type="button">Search</button>
   </div>
 
@@ -454,6 +453,13 @@
       <div class="info-cell"><div class="kv"><span class="k">Safety/Health:</span><input class="f-input f-safetyHealth" type="text"></div></div>
     </div>
 
+    <div class="info-grid cols-4">
+      <div class="info-cell"><div class="kv"><span class="k">Employees:</span><input class="f-input f-employees" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Owner Type:</span><input class="f-input f-ownerType" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Migrant Labor:</span><input class="f-input f-migrant" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Planning Guides:</span><input class="f-input f-planningGuides" type="text"></div></div>
+    </div>
+
     <div class="section">
       <p class="section-title">
         <span class="title-left">Violation Items</span>
@@ -493,11 +499,11 @@
     <div class="investigation-summary">
       <div class="inv-head">
         <h3 class="inv-title">Investigation Summary</h3>
-        <span class="inv-badge" hidden>FAT/CAT</span>
       </div>
       <div class="inv-meta-row">
         <div><span class="k">Investigation Nr:</span><input class="f-input f-invNr f-sm" type="text"></div>
         <div><span class="k">Event:</span><input class="f-input f-invEvent f-sm" type="text" placeholder="MM/DD/YYYY"></div>
+        <div><span class="k">Event Time:</span><input class="f-input f-invEventTime f-sm" type="text"></div>
       </div>
       <div class="inv-narrative-row">
         <textarea class="f-input f-invNarrative" rows="2" placeholder="Incident narrative…"></textarea>
@@ -532,6 +538,20 @@
           </tbody>
         </table>
       </div>
+
+      <p class="inv-subheading inv-detail-heading">Injury Detail</p>
+      <div class="inv-detail-grid">
+        <div class="kv"><span class="k">Part of Body:</span><input class="f-input f-invPartOfBody" type="text"></div>
+        <div class="kv"><span class="k">Source of Injury:</span><input class="f-input f-invSource" type="text"></div>
+        <div class="kv"><span class="k">Event Type:</span><input class="f-input f-invEventType" type="text"></div>
+        <div class="kv"><span class="k">Human Factor:</span><input class="f-input f-invHumanFactor" type="text"></div>
+        <div class="kv"><span class="k">Environmental Factor:</span><input class="f-input f-invEnvFactor" type="text"></div>
+        <div class="kv"><span class="k">Task Assigned:</span><input class="f-input f-invTaskAssigned" type="text"></div>
+        <div class="kv"><span class="k">Hazardous Substance:</span><input class="f-input f-invHazsub" type="text"></div>
+        <div class="kv"><span class="k">Fall Distance (ft):</span><input class="f-input f-invFallDistance" type="text"></div>
+        <div class="kv"><span class="k">Fall Height (ft):</span><input class="f-input f-invFallHeight" type="text"></div>
+      </div>
+
       <div class="inv-keywords-row">
         <span class="k">Keywords:</span>
         <input class="f-input f-invKeywords" type="text">
@@ -565,6 +585,14 @@
     <td colspan="14">
       <div class="cit-def">
         <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
+      </div>
+      <div class="cit-extra">
+        <div class="kv"><span class="k">Abatement Complete:</span><input class="f-input" type="text" data-field="abateComplete"></div>
+        <div class="kv"><span class="k">Final Order Date:</span><input class="f-input" type="text" data-field="finalOrderDate" placeholder="MM/DD/YYYY"></div>
+        <div class="kv"><span class="k">Prompted By:</span><input class="f-input" type="text" data-field="prompted"></div>
+        <div class="kv"><span class="k">Hazard Category:</span><input class="f-input" type="text" data-field="hazcat"></div>
+        <div class="kv"><span class="k">Emphasis Program:</span><input class="f-input" type="text" data-field="emphasis"></div>
+        <div class="kv"><span class="k">Hazardous Substances:</span><input class="f-input" type="text" data-field="hazSubstances"></div>
       </div>
     </td>
   </tr>
@@ -883,10 +911,6 @@
       cell.appendChild(tag);
     }
 
-    const detailRow = summaryRow.nextElementSibling;
-    const badge = detailRow && detailRow.querySelector('.inv-badge');
-    if (badge) { badge.hidden = !on; badge.textContent = label || 'FAT/CAT'; }
-
     recalcAgg();
   }
   // Hooks for the API integration.
@@ -942,23 +966,31 @@
     setField(d.querySelector('.f-scope'), rec.scope);
     setField(d.querySelector('.f-safetyHealth'), rec.safetyHealth);
     setField(d.querySelector('.f-advancedNotice'), rec.advancedNotice);
+    setField(d.querySelector('.f-employees'), rec.employees);
+    setField(d.querySelector('.f-ownerType'), rec.ownerType);
+    setField(d.querySelector('.f-migrant'), rec.migrant);
+    setField(d.querySelector('.f-planningGuides'), rec.planningGuides);
 
     (rec.violationItems || []).forEach(item => {
       addCitationRow(d);
       const rows = d.querySelectorAll('.citations-body tr.citations-row');
       const row = rows[rows.length - 1];
+      const extraRow = row.nextElementSibling;
       Object.keys(item).forEach(k => {
         if (k === 'standardDetails') return;
-        setField(row.querySelector(`input[data-field="${k}"]`), item[k]);
+        // main row first, then the extras line below it
+        const el = row.querySelector(`input[data-field="${k}"]`)
+          || (extraRow && extraRow.querySelector(`input[data-field="${k}"]`));
+        setField(el, item[k]);
       });
-      const defBox = row.nextElementSibling && row.nextElementSibling.querySelector('.f-stdDefinition');
-      setField(defBox, item.standardDetails);
+      setField(extraRow && extraRow.querySelector('.f-stdDefinition'), item.standardDetails);
     });
 
     const inv = rec.investigation;
     if (inv) {
       setField(d.querySelector('.f-invNr'), inv.investigationNr);
       setField(d.querySelector('.f-invEvent'), inv.event);
+      setField(d.querySelector('.f-invEventTime'), inv.eventTime);
       setField(d.querySelector('.f-invNarrative'), inv.narrative);
       setField(d.querySelector('.f-invKeywords'), inv.keywords);
       const first = (inv.injured || [])[0];
@@ -969,6 +1001,15 @@
         setField(d.querySelector('.f-invDegree'), first.degreeOfInjury);
         setField(d.querySelector('.f-invNature'), first.natureOfInjury);
         setField(d.querySelector('.f-invOccupation'), first.occupation);
+        setField(d.querySelector('.f-invPartOfBody'), first.partOfBody);
+        setField(d.querySelector('.f-invSource'), first.sourceOfInjury);
+        setField(d.querySelector('.f-invEventType'), first.eventType);
+        setField(d.querySelector('.f-invHumanFactor'), first.humanFactor);
+        setField(d.querySelector('.f-invEnvFactor'), first.environmentalFactor);
+        setField(d.querySelector('.f-invTaskAssigned'), first.taskAssigned);
+        setField(d.querySelector('.f-invHazsub'), first.hazardousSubstance);
+        setField(d.querySelector('.f-invFallDistance'), first.fallDistance);
+        setField(d.querySelector('.f-invFallHeight'), first.fallHeight);
       }
     }
 
@@ -1008,8 +1049,6 @@
 
   // Establishment search: pulls every inspection for a name and fills the page.
   const estabName = document.getElementById('estabName');
-  const estabState = document.getElementById('estabState');
-  const estabYears = document.getElementById('estabYears');
 
   // The Worker can return an empty body if it is cut short; say so plainly
   // instead of failing with a JSON parse error.
@@ -1027,18 +1066,11 @@
     }
   }
 
-  function sinceDate(years) {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - (Number(years) || 5));
-    return d.toISOString().slice(0, 10);
-  }
-
   async function searchEstablishment() {
     const name = estabName.value.trim();
     if (!name) { setStatus('Enter an establishment name to search.', true); estabName.focus(); return; }
 
-    const params = new URLSearchParams({ name, since: sinceDate(estabYears.value), limit: '25' });
-    if (estabState.value.trim()) params.set('state', estabState.value.trim().toUpperCase());
+    const params = new URLSearchParams({ name, limit: '25' });
 
     setStatus('Searching…');
     try {
@@ -1049,7 +1081,7 @@
       renderRecords(records);
       setStatus(records.length
         ? `${records.length} inspection${records.length === 1 ? '' : 's'} for "${name}"`
-        : `No inspections found for "${name}" in the last ${estabYears.value} years.`,
+        : `No inspections found for "${name}".`,
         !records.length);
     } catch (err) {
       setStatus('Search failed: ' + err.message, true);
@@ -1057,14 +1089,12 @@
   }
 
   document.getElementById('estabSearchBtn').addEventListener('click', searchEstablishment);
-  [estabName, estabState, estabYears].forEach(el =>
-    el.addEventListener('keydown', e => { if (e.key === 'Enter') searchEstablishment(); }));
+  estabName.addEventListener('keydown', e => { if (e.key === 'Enter') searchEstablishment(); });
 
   // A ?name= in the URL prefills and runs the search.
   (function prefillFromUrl() {
     const q = new URLSearchParams(location.search);
     if (q.get('name')) estabName.value = q.get('name');
-    if (q.get('state')) estabState.value = q.get('state');
   })();
 
   window.violationsDesk.searchEstablishment = searchEstablishment;
