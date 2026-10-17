@@ -670,11 +670,12 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
   const count = t => live.filter(v => v.viol_type === t).length;
   const sum = f => live.reduce((n, v) => n + (parseFloat(v[f]) || 0), 0);
 
-  // insp_type M is OSHA's own Fat/Cat inspection type. A recorded fatality or a
-  // fatal injury row also sets the flag; an accident inspection with neither is a catastrophe.
+  // Fatality only. A recorded fatality on the accident, or an injury recorded as
+  // a fatality. The inspection type is deliberately NOT used: an accident or
+  // Fat/Cat inspection may involve no death, and flagging those drowns out the
+  // ones that do.
   const fatal = accident?.fatality === 'X' || (injuries || []).some(i => Number(i.degree_of_inj) === 1);
-  const fatCatType = String(insp.insp_type || '').trim().toUpperCase() === 'M';
-  const fatCat = fatal ? 'FAT' : (fatCatType ? 'FAT/CAT' : (insp.insp_type === 'A' ? 'CAT' : null));
+  const fatCat = fatal ? 'FATALITY' : null;
 
   return {
     activityNr: String(insp.activity_nr),
