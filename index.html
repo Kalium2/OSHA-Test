@@ -77,6 +77,8 @@
   .case-count .n { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--ink); margin-right: 4px; }
   .citations-list { display: flex; flex-direction: column; gap: 8px; }
   .citation-block { border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; background: var(--bg); }
+  .citation-block .viol-table thead th { white-space: nowrap; }
+  .citation-block .viol-table td { white-space: normal; }
   .citation-block .viol-table thead th[data-csort] { cursor: pointer; user-select: none; }
   .citation-block .viol-table thead th[data-csort]:hover { color: var(--ink); background: var(--select-bg); }
   .citation-block tbody tr.citations-row td { border-bottom: none; }
@@ -157,6 +159,7 @@
     border: 1px solid var(--line-strong); border-radius: 3px; padding: 3px 6px; width: 100%;
   }
   .f-input:focus { outline: 2px solid var(--focus); outline-offset: 1px; background: var(--bg); }
+  textarea.f-input { white-space: pre-wrap; word-break: break-word; line-height: 1.35; }
   .f-input[readonly] {
     background: transparent; border-color: transparent; padding-left: 0; cursor: default; color: var(--ink);
   }
@@ -386,9 +389,9 @@
           <dt>Current Penalty Total</dt><dd>The inspection's current penalties, added up from its citations. Updates as citation penalties are edited.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
           <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
-          <dt>Emphasis Programs</dt><dd>Specific hazards OSHA targets through planned inspections. A value means the inspection was not routine. Examples are silica, trenching, heat, warehousing etc. </dd>
+          <dt>Emphasis Programs</dt><dd>An emphasis program is a hazard OSHA has decided to go looking for, set out in a directive and worked through planned inspections. A value here means this inspection was targeted, not routine: OSHA arrived expecting to find that hazard in that industry. National Emphasis Programs run countrywide (silica, trenching, heat, warehousing); Local and Regional ones are set by an area office; Strategic Plan and Primary Emphasis codes mark OSHA's own priority work. For underwriting this is context the citation count alone does not give: a clean result under a targeted inspection carries more weight than a clean routine visit, and a cited one under a program that matches the account's own exposure is a stronger signal. Named programs beside the code are maintained by the business; an unrecognised code shows as published.</dd>
           <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount at the site, private or government employer, whether migrant labor was involved, and whether the workforce was represented.</dd>
-          <dt>FAT/CAT</dt><dd>Fatality or catastrophe inspection. Citations tied to the accident sort to the top and carry the same marker.</dd>
+          <dt>Fatality</dt><dd>Someone died: either the accident record carries a fatality, or an injury is recorded as one. The inspection type is not used, so an accident or Fat/Cat inspection where nobody died is not flagged. Citations arising from the accident sort to the top of the inspection and carry an ACCIDENT marker.</dd>
           <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
           <dt>Five Year History</dt><dd>Citation counts and penalty totals across all inspections shown. Deleted inspections are excluded.</dd>
           <dt>Gravity</dt><dd>OSHA's severity score for a serious violation, 1 to 10. Higher means a more severe hazard.</dd>
@@ -445,7 +448,7 @@
     <div class="agg-tile"><div class="n">—</div><div class="l">Serious</div></div>
     <div class="agg-tile"><div class="n">—</div><div class="l">Willful</div></div>
     <div class="agg-tile"><div class="n">—</div><div class="l">Repeat</div></div>
-    <div class="agg-tile"><div class="n">—</div><div class="l">FAT/CAT</div></div>
+    <div class="agg-tile"><div class="n">—</div><div class="l">Fatality</div></div>
     <div class="agg-tile"><div class="n">—</div><div class="l">Other</div></div>
     <div class="agg-tile"><div class="n">—</div><div class="l">Unclass.</div></div>
     <div class="agg-tile money"><div class="n">—</div><div class="l">Total current penalties</div></div>
@@ -476,9 +479,9 @@
           <th class="num" data-sort="serious">Serious <span class="sort-ind"></span></th>
           <th class="num" data-sort="willful">Willful <span class="sort-ind"></span></th>
           <th class="num" data-sort="repeat">Repeat <span class="sort-ind"></span></th>
-          <th class="fatcat-col" data-sort="fatcat">FAT/CAT <span class="sort-ind"></span></th>
+          <th class="fatcat-col" data-sort="fatcat">Fatality <span class="sort-ind"></span></th>
           <th class="num" data-sort="other">Other <span class="sort-ind"></span></th>
-          <th class="num" data-sort="currentTotal">Current Penalty <span class="sort-ind"></span></th>
+          <th class="num" data-sort="currentTotal">Current Penalty Total <span class="sort-ind"></span></th>
               <th>Establishment Name</th>
           <th>Date Closed</th>
           <th class="act-col"></th>
@@ -503,7 +506,7 @@
               <th class="num" data-sort="serious">Serious <span class="sort-ind"></span></th>
               <th class="num" data-sort="willful">Willful <span class="sort-ind"></span></th>
               <th class="num" data-sort="repeat">Repeat <span class="sort-ind"></span></th>
-              <th class="fatcat-col" data-sort="fatcat">FAT/CAT <span class="sort-ind"></span></th>
+              <th class="fatcat-col" data-sort="fatcat">Fatality <span class="sort-ind"></span></th>
               <th class="num" data-sort="other">Other <span class="sort-ind"></span></th>
               <th class="num" data-sort="currentTotal">Current Penalty Total <span class="sort-ind"></span></th>
               <th>Establishment Name</th>
@@ -530,17 +533,17 @@
         <div class="kv"><span class="k">Mailing Address:</span><textarea class="f-input f-mailingAddress" rows="1"></textarea></div>
       </div>
       <div class="info-cell"><div class="kv"><span class="k">NAICS:</span><input class="f-input f-naics" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Advanced Notice:</span><input class="f-input f-advancedNotice" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Inspection Type:</span><input class="f-input f-inspectionType" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Scope:</span><input class="f-input f-scope" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Safety/Health:</span><input class="f-input f-safetyHealth" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Advanced Notice:</span><textarea class="f-input f-advancedNotice" rows="1"></textarea></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Inspection Type:</span><textarea class="f-input f-inspectionType" rows="1"></textarea></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Scope:</span><textarea class="f-input f-scope" rows="1"></textarea></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Safety/Health:</span><textarea class="f-input f-safetyHealth" rows="1"></textarea></div></div>
       <div class="info-cell"><div class="kv"><span class="k">Employees:</span><input class="f-input f-employees" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Owner Type:</span><input class="f-input f-ownerType" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Union Status:</span><input class="f-input f-unionStatus" type="text"></div></div>
-      <div class="info-cell"><div class="kv"><span class="k">Migrant Labor:</span><input class="f-input f-migrant" type="text"></div></div>
-      <div class="info-cell span-2"><div class="kv"><span class="k">Planning Guides:</span><input class="f-input f-planningGuides" type="text"></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Owner Type:</span><textarea class="f-input f-ownerType" rows="1"></textarea></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Union Status:</span><textarea class="f-input f-unionStatus" rows="1"></textarea></div></div>
+      <div class="info-cell"><div class="kv"><span class="k">Migrant Labor:</span><textarea class="f-input f-migrant" rows="1"></textarea></div></div>
+      <div class="info-cell span-2"><div class="kv"><span class="k">Planning Guides:</span><textarea class="f-input f-planningGuides" rows="1"></textarea></div></div>
       <div class="info-cell span-2"><div class="kv"><span class="k">Emphasis Programs:</span><textarea class="f-input f-emphasis" rows="1"></textarea></div></div>
-      <div class="info-cell span-2"><div class="kv"><span class="k">Why No Inspection:</span><input class="f-input f-whyNoInspection" type="text"></div></div>
+      <div class="info-cell span-2"><div class="kv"><span class="k">Why No Inspection:</span><textarea class="f-input f-whyNoInspection" rows="1"></textarea></div></div>
     </div>
 
     <div class="section violations-section">
@@ -557,41 +560,41 @@
         <h3 class="inv-title">Investigation Summary</h3>
       </div>
       <div class="inv-meta-grid">
-        <div class="kv"><span class="k">Investigation #:</span><input class="f-input f-invNr" type="text"></div>
-        <div class="kv"><span class="k">Event Date:</span><input class="f-input f-invEvent" type="text" placeholder="MM/DD/YYYY"></div>
-        <div class="kv"><span class="k">Event Time:</span><input class="f-input f-invEventTime" type="text"></div>
+        <div class="kv"><span class="k">Investigation #:</span><textarea class="f-input f-invNr" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Event Date:</span><textarea class="f-input f-invEvent" placeholder="MM/DD/YYYY" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Event Time:</span><textarea class="f-input f-invEventTime" rows="1"></textarea></div>
         <div class="kv"><span class="k">Age:</span><input class="f-input f-invAge" type="text"></div>
-        <div class="kv"><span class="k">Sex:</span><input class="f-input f-invSex" type="text"></div>
-        <div class="kv"><span class="k">Degree of Injury:</span><input class="f-input f-invDegree" type="text"></div>
-        <div class="kv"><span class="k">Nature of Injury:</span><input class="f-input f-invNature" type="text"></div>
-        <div class="kv"><span class="k">Occupation:</span><input class="f-input f-invOccupation" type="text"></div>
+        <div class="kv"><span class="k">Sex:</span><textarea class="f-input f-invSex" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Degree of Injury:</span><textarea class="f-input f-invDegree" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Nature of Injury:</span><textarea class="f-input f-invNature" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Occupation:</span><textarea class="f-input f-invOccupation" rows="1"></textarea></div>
       </div>
       <div class="inv-narrative-row">
         <textarea class="f-input f-invNarrative" rows="2" placeholder="Incident narrative…"></textarea>
       </div>
       <p class="inv-subheading inv-detail-heading">Injury Detail</p>
       <div class="inv-detail-grid">
-        <div class="kv"><span class="k">Part of Body:</span><input class="f-input f-invPartOfBody" type="text"></div>
-        <div class="kv"><span class="k">Source of Injury:</span><input class="f-input f-invSource" type="text"></div>
-        <div class="kv"><span class="k">Event Type:</span><input class="f-input f-invEventType" type="text"></div>
-        <div class="kv"><span class="k">Human Factor:</span><input class="f-input f-invHumanFactor" type="text"></div>
-        <div class="kv"><span class="k">Environmental Factor:</span><input class="f-input f-invEnvFactor" type="text"></div>
-        <div class="kv"><span class="k">Task Assigned:</span><input class="f-input f-invTaskAssigned" type="text"></div>
-        <div class="kv"><span class="k">Hazardous Substance:</span><input class="f-input f-invHazsub" type="text"></div>
+        <div class="kv"><span class="k">Part of Body:</span><textarea class="f-input f-invPartOfBody" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Source of Injury:</span><textarea class="f-input f-invSource" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Event Type:</span><textarea class="f-input f-invEventType" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Human Factor:</span><textarea class="f-input f-invHumanFactor" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Environmental Factor:</span><textarea class="f-input f-invEnvFactor" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Task Assigned:</span><textarea class="f-input f-invTaskAssigned" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Hazardous Substance:</span><textarea class="f-input f-invHazsub" rows="1"></textarea></div>
         <div class="kv"><span class="k">Fall Distance (ft):</span><input class="f-input f-invFallDistance" type="text"></div>
         <div class="kv"><span class="k">Fall Height (ft):</span><input class="f-input f-invFallHeight" type="text"></div>
         <div class="kv"><span class="k">Construction Operation:</span><textarea class="f-input f-invConstOp" rows="1"></textarea></div>
         <div class="kv"><span class="k">Construction Cause of Injury:</span><textarea class="f-input f-invConstCause" rows="1"></textarea></div>
         <div class="kv"><span class="k">Cause of Fatality:</span><textarea class="f-input f-invFatCause" rows="1"></textarea></div>
-        <div class="kv"><span class="k">Project Type:</span><input class="f-input f-invProjectType" type="text"></div>
-        <div class="kv"><span class="k">Project Cost:</span><input class="f-input f-invProjectCost" type="text"></div>
-        <div class="kv"><span class="k">Construction End Use:</span><input class="f-input f-invEndUse" type="text"></div>
+        <div class="kv"><span class="k">Project Type:</span><textarea class="f-input f-invProjectType" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Project Cost:</span><textarea class="f-input f-invProjectCost" rows="1"></textarea></div>
+        <div class="kv"><span class="k">Construction End Use:</span><textarea class="f-input f-invEndUse" rows="1"></textarea></div>
         <div class="kv"><span class="k">Building Stories:</span><input class="f-input f-invStories" type="text"></div>
       </div>
 
       <div class="inv-keywords-row">
         <span class="k">Keywords:</span>
-        <input class="f-input f-invKeywords" type="text">
+        <textarea class="f-input f-invKeywords" rows="1"></textarea>
       </div>
     </div>
 
@@ -603,8 +606,8 @@
     <div class="table-scroll">
       <table class="viol-table">
         <colgroup>
-          <col style="width:62px"><col style="width:10%"><col style="width:8%"><col style="width:8%"><col style="width:16%">
-          <col style="width:10%"><col style="width:10%"><col style="width:11%"><col style="width:11%">
+          <col style="width:64px"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:17%">
+          <col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%">
           <col>
         </colgroup>
         <thead>
@@ -624,15 +627,15 @@
         <tbody>
           <tr class="citations-row">
             <td class="row-num"></td>
-            <td><input class="f-input f-sm" type="text" data-field="citationId"></td>
-            <td><input class="f-input f-sm" type="text" data-field="initialCitationType"></td>
-            <td><input class="f-input f-sm" type="text" data-field="citationType"></td>
+            <td><textarea class="f-input f-sm" data-field="citationId" rows="1"></textarea></td>
+            <td><textarea class="f-input f-sm" data-field="initialCitationType" rows="1"></textarea></td>
+            <td><textarea class="f-input f-sm" data-field="citationType" rows="1"></textarea></td>
             <td><textarea class="f-input f-sm f-standardCited" rows="1" data-field="standardCited"></textarea></td>
             <td><input class="f-input f-sm" type="text" data-field="issuanceDate" placeholder="MM/DD/YYYY"></td>
             <td class="contest-col"><input class="f-input f-sm" type="text" data-field="contest" placeholder="MM/DD/YYYY"></td>
             <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="currentPenalty"></span></td>
             <td><span class="f-money-wrap"><span class="sign">$</span><input class="f-input f-num f-sm" type="text" data-field="initialPenalty"></span></td>
-            <td><input class="f-input f-sm" type="text" data-field="latestEvent"></td>
+            <td><textarea class="f-input f-sm" data-field="latestEvent" rows="1"></textarea></td>
           </tr>
         </tbody>
       </table>
@@ -642,14 +645,14 @@
     </div>
     <div class="cit-extra">
       <div class="kv"><span class="k">Abatement Due Date:</span><input class="f-input" type="text" data-field="abatementDueDate" placeholder="MM/DD/YYYY"></div>
-      <div class="kv keep"><span class="k">Abatement Complete:</span><input class="f-input" type="text" data-field="abateComplete"></div>
+      <div class="kv keep"><span class="k">Abatement Complete:</span><textarea class="f-input" data-field="abateComplete" rows="1"></textarea></div>
       <div class="kv"><span class="k">FTA Penalty:</span><input class="f-input f-num" type="text" data-field="ftaPenalty"></div>
       <div class="kv"><span class="k">Final Order Date:</span><input class="f-input" type="text" data-field="finalOrderDate" placeholder="MM/DD/YYYY"></div>
-      <div class="kv"><span class="k">Prompted By:</span><input class="f-input" type="text" data-field="prompted"></div>
-      <div class="kv"><span class="k">Hazard Category:</span><input class="f-input" type="text" data-field="hazcat"></div>
+      <div class="kv"><span class="k">Prompted By:</span><textarea class="f-input" data-field="prompted" rows="1"></textarea></div>
+      <div class="kv"><span class="k">Hazard Category:</span><textarea class="f-input" data-field="hazcat" rows="1"></textarea></div>
       <div class="kv"><span class="k">Gravity (1-10):</span><input class="f-input" type="text" data-field="gravity"></div>
-      <div class="kv"><span class="k">Emphasis Program:</span><input class="f-input" type="text" data-field="emphasis"></div>
-      <div class="kv"><span class="k">Hazardous Substances:</span><input class="f-input" type="text" data-field="hazSubstances"></div>
+      <div class="kv"><span class="k">Emphasis Program:</span><textarea class="f-input" data-field="emphasis" rows="1"></textarea></div>
+      <div class="kv"><span class="k">Hazardous Substances:</span><textarea class="f-input" data-field="hazSubstances" rows="1"></textarea></div>
     </div>
   </div>
 </template>
@@ -782,7 +785,7 @@
   function renumberCitations(detailEl) {
     detailEl.querySelectorAll('.citation-block').forEach((block, i) => {
       const cell = block.querySelector('.row-num');
-      const flag = cell.querySelector('.cit-flag');   // keep any FAT/CAT marker
+      const flag = cell.querySelector('.cit-flag');   // keep any accident marker
       cell.textContent = (i + 1) + '.';
       if (flag) cell.appendChild(flag);
     });
@@ -894,7 +897,7 @@
       '<td class="fatcat-cell"><div class="fatcat-box"></div></td>' +
       '<td class="num"><input class="f-input f-num f-sm" type="text" value="0" data-cat="other"></td>' +
       '<td class="num pen-total"><span class="pen-total-value">$0</span></td>' +
-      '<td><input class="f-input f-establishment" type="text" placeholder="Establishment name"></td>' +
+      '<td><textarea class="f-input f-establishment" placeholder="Establishment name" rows="1"></textarea></td>' +
       '<td><input class="f-input f-dateClosed f-sm" type="text" placeholder="MM/DD/YYYY"></td>' +
       '<td><button class="btn btn-sm btn-danger-ghost" data-action="delete-record" type="button">Delete</button></td>';
 
@@ -983,14 +986,14 @@
     return summaryRow;
   }
 
-  // FAT/CAT flag: off by default; only shown when the API returns a FAT/CAT data point.
+  // Fatality flag: off unless the record shows a death.
   // applyApiData(summaryRow, apiPayload) sets the table-row identifier, the badge in the
   // Investigation Summary, and the Five Year History counter together. Any truthy
   // `fatCat` value (true, "FAT", "CAT", ...) turns it on; missing/empty/false leaves it off.
   function applyApiData(summaryRow, data) {
     const v = data && data.fatCat;
     const on = !!v && String(v).toLowerCase() !== 'false';
-    const label = on ? ((typeof v === 'string' && v.toLowerCase() !== 'true') ? v.toUpperCase() : 'FAT/CAT') : '';
+    const label = on ? ((typeof v === 'string' && v.toLowerCase() !== 'true') ? v.toUpperCase() : 'FATALITY') : '';
     summaryRow.dataset.fatcat = on ? '1' : '';
 
     const cell = summaryRow.querySelector('.fatcat-box');
@@ -1077,7 +1080,7 @@
         block.querySelector('.citations-row').classList.add('accident-related');
         const tag = document.createElement('span');
         tag.className = 'cit-flag';
-        tag.textContent = 'FAT/CAT';
+        tag.textContent = 'ACCIDENT';
         block.querySelector('.row-num').appendChild(tag);
       }
       // Contest only shows when there is a date to show.
