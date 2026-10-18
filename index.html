@@ -75,6 +75,22 @@
   #estabName { flex: 1 1 260px; min-width: 180px; }
   .case-counts { display: flex; gap: 18px; align-items: baseline; margin-top: 16px; font-size: 12.5px; color: var(--ink-soft); }
   .case-count .n { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--ink); margin-right: 4px; }
+  .ai-summary { border: 1px solid var(--line); border-left: 3px solid var(--link); background: var(--bg-sunken); border-radius: 3px; padding: 10px 14px; margin-top: 14px; }
+  .ai-summary[hidden] { display: none; }
+  .ai-summary-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .ai-summary-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+  .ai-summary-meta { font-size: 11px; color: var(--ink-faint); margin-right: auto; }
+  .ai-summary-overall { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
+  .ai-summary-item { font-size: 12.5px; line-height: 1.45; margin-bottom: 5px; display: flex; gap: 8px; }
+  .ai-summary-item .who { font-weight: 700; white-space: nowrap; }
+  .ai-summary-item .what { color: var(--ink-soft); }
+  .ai-summary-error { font-size: 12.5px; color: var(--danger); }
+  .bulk-actions { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; }
+  .bulk-actions[hidden] { display: none; }
+  .bulk-count { font-weight: 700; color: var(--ink); }
+  .btn-link-sm { background: none; border: none; color: var(--link); font-size: 12px; font-weight: 600; cursor: pointer; padding: 2px 3px; }
+  .btn-link-sm:hover { text-decoration: underline; }
+  tr.insp-row.selected > td { background: var(--select-bg); }
   .citations-list { display: flex; flex-direction: column; gap: 8px; }
   .citation-block { border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; background: var(--bg); }
   .citation-block .viol-table thead th { white-space: nowrap; }
@@ -202,16 +218,18 @@
   table.inspections-table td { padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
   table.inspections-table tr.insp-detail-row > td { overflow: visible; white-space: normal; }
   /* fixed column widths for the results tables (live + deleted) */
-  table.inspections-table thead th:nth-child(1) { width: 52px; }   /* # */
-  table.inspections-table thead th:nth-child(2) { width: 112px; }  /* Inspection */
-  table.inspections-table thead th:nth-child(4) { width: 102px; }  /* Case Status */
-  table.inspections-table thead th:nth-child(5) { width: 62px; }   /* State */
-  table.inspections-table thead th:nth-child(n+6):nth-child(-n+10) { width: 68px; }  /* counts + Fatality */
-  table.inspections-table thead th:nth-child(11) { width: 100px; } /* Current Penalties */
-  table.inspections-table thead th:nth-child(12) { width: 96px; }  /* Initial Penalties */
-  table.inspections-table thead th:nth-child(13) { width: 100px; } /* Date Opened */
-  table.inspections-table thead th:nth-child(14) { width: 100px; } /* Date Closed */
-  table.inspections-table thead th:nth-child(15) { width: 76px; }  /* Delete */
+  table.inspections-table th.sel-col { width: 30px; }
+  table.inspections-table td.sel-col { text-align: center; }
+  table.inspections-table thead th:nth-child(2) { width: 46px; }   /* # */
+  table.inspections-table thead th:nth-child(3) { width: 112px; }  /* Inspection */
+  table.inspections-table thead th:nth-child(5) { width: 100px; }  /* Case Status */
+  table.inspections-table thead th:nth-child(6) { width: 60px; }   /* State */
+  table.inspections-table thead th:nth-child(n+7):nth-child(-n+11) { width: 66px; }  /* counts + Fatality */
+  table.inspections-table thead th:nth-child(12) { width: 98px; }  /* Current Penalties */
+  table.inspections-table thead th:nth-child(13) { width: 94px; }  /* Initial Penalties */
+  table.inspections-table thead th:nth-child(14) { width: 98px; }  /* Date Opened */
+  table.inspections-table thead th:nth-child(15) { width: 98px; }  /* Date Closed */
+  table.inspections-table thead th:nth-child(16) { width: 76px; }  /* Delete */
   table.inspections-table td.pen-total { font-family: var(--mono); font-weight: 700; color: var(--link); }
   table.inspections-table td.pen-initial { font-weight: 400; color: var(--ink-soft); }
   table.inspections-table thead th.fatcat-col, table.inspections-table td.fatcat-cell { text-align: center; }
@@ -361,8 +379,8 @@
 
   @media (max-width: 1100px) {
     /* keep Establishment Name usable on narrow screens: drop the Last Run column */
-    table.inspections-table thead th:nth-child(14),
-    table.inspections-table tr.insp-row > td:nth-child(14) { display: none; }
+    table.inspections-table thead th:nth-child(15),
+    table.inspections-table tr.insp-row > td:nth-child(15) { display: none; }
   }
   @media (max-width: 760px) {
     .agg-strip.visible { grid-template-columns: repeat(4, 1fr); }
@@ -378,6 +396,7 @@
 
   <div class="search-bar">
     <button class="btn btn-primary" id="getOshaBtn" type="button">Refresh OSHA Data</button>
+    <button class="btn btn-ghost" id="generateSummary" type="button">Generate AI Summary</button>
     <span class="load-status" id="loadStatus" role="status"></span>
     <label class="empty-toggle"><input type="checkbox" id="showEmptyFields"> Show empty fields</label>
     <a class="osha-link" href="https://www.osha.gov/ords/imis/establishment.html" target="_blank" rel="noopener noreferrer">OSHA Establishment Search ↗</a>
@@ -390,6 +409,8 @@
           <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
           <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, how far the worker fell, and the project itself — type, cost band, construction activity and number of stories. The project detail gives a sense of the scale of work the employer takes on.</dd>
           <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
+          <dt>AI Summary</dt><dd>Summarises the inspections currently on screen in under 50 words each, leading with what bears on risk. Delete the rows that are not this account and regenerate: the summary follows what is displayed.</dd>
+          <dt>Delete selected</dt><dd>Tick several inspections and remove them in one step, with one reason covering the lot. A generic name returns many unrelated establishments; the individual Delete still works row by row.</dd>
           <dt>Current / Initial Penalties (inspection)</dt><dd>That inspection's penalties, added up from its own citations: what it stands at now, and what was first proposed. A gap between them usually means a settlement. The Five Year History strip totals both across every inspection shown.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
           <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
@@ -469,12 +490,27 @@
     <span class="case-count"><span class="n" id="countTotal">0</span> inspections</span>
     <span class="case-count"><span class="n" id="countOpen">0</span> open</span>
     <span class="case-count"><span class="n" id="countClosed">0</span> closed</span>
+    <span class="bulk-actions" id="bulkActions" hidden>
+      <span class="bulk-count" id="bulkCount">0 selected</span>
+      <button class="btn btn-sm btn-danger-ghost" id="deleteSelected" type="button">Delete selected</button>
+      <button class="btn-link-sm" id="clearSelection" type="button">Clear</button>
+    </span>
+  </div>
+
+  <div class="ai-summary" id="aiSummary" hidden>
+    <div class="ai-summary-head">
+      <span class="ai-summary-title">AI Summary</span>
+      <span class="ai-summary-meta" id="aiSummaryMeta"></span>
+      <button class="btn-link-sm" id="regenerateSummary" type="button">Regenerate</button>
+    </div>
+    <div class="ai-summary-body" id="aiSummaryBody"></div>
   </div>
 
   <div class="inspections-table-wrap" id="inspectionsTableWrap" style="display:none;">
     <table class="inspections-table">
       <thead>
         <tr>
+          <th class="sel-col"><input type="checkbox" id="selectAllRows" aria-label="Select all inspections"></th>
           <th>#</th>
           <th>Inspection</th>
                     <th>Establishment Name</th>
@@ -765,6 +801,7 @@
     document.getElementById('countTotal').textContent = rows.length;
     document.getElementById('countOpen').textContent = t.open;
     document.getElementById('countClosed').textContent = t.closed;
+    if (typeof refreshSelection === 'function') refreshSelection();
     document.getElementById('caseCounts').style.display = 'flex';
     aggStrip.classList.add('visible');
   }
@@ -893,6 +930,7 @@
     summaryRow.dataset.currPenalty = 0; summaryRow.dataset.origPenalty = 0;
 
     summaryRow.innerHTML =
+      '<td class="sel-col"><input type="checkbox" class="row-select" aria-label="Select inspection"></td>' +
       '<td class="insp-cell-num"><span class="insp-chevron" data-action="toggle-row">▶</span>' + n + '</td>' +
       '<td><input class="f-input activity-link f-sm" type="text" placeholder="e.g. 1844208.015"></td>' +
       '<td><textarea class="f-input f-establishment" placeholder="Establishment name" rows="1"></textarea></td>' +
@@ -917,7 +955,7 @@
     const detailRow = document.createElement('tr');
     detailRow.className = 'insp-detail-row hidden';
     const detailTd = document.createElement('td');
-    detailTd.colSpan = 15;
+    detailTd.colSpan = 16;
     detailTd.appendChild(detailEl);
     detailRow.appendChild(detailTd);
 
@@ -931,6 +969,8 @@
 
     function performDelete(reason) {
       isDeleted = true;
+      const box = summaryRow.querySelector('.row-select');
+      if (box) { box.checked = false; summaryRow.classList.remove('selected'); }
       summaryRow.dataset.deleteReason = reason;
       summaryRow.title = 'Deletion reason: ' + reason;
       summaryRow.remove();
@@ -968,6 +1008,9 @@
       inspectionsTableWrap.style.display = 'block';
       recalcAgg();
     }
+
+    summaryRow._performDelete = performDelete;
+    summaryRow._label = label;
 
     actionBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1131,10 +1174,126 @@
       }
     }
 
+    summaryRow._record = rec;
     hideEmptyFields(d);
     lockRecord(summaryRow, d);
     applyApiData(summaryRow, { fatCat: rec.fatCat });
   }
+
+  // ---- AI summary of whatever is on screen ----
+  const aiPanel = document.getElementById('aiSummary');
+  const aiBody = document.getElementById('aiSummaryBody');
+  const aiMeta = document.getElementById('aiSummaryMeta');
+  const aiButton = document.getElementById('generateSummary');
+
+  // Records are sent as they stand, so deleting one and running again changes
+  // the answer: the summary always describes what the underwriter is looking at.
+  function summaryPayload() {
+    return [...recordsBody.querySelectorAll('tr.insp-row')]
+      .map(row => row._record)
+      .filter(Boolean);
+  }
+
+  async function generateSummary() {
+    const records = summaryPayload();
+    aiPanel.hidden = false;
+    if (!records.length) {
+      aiBody.innerHTML = '<p class="ai-summary-error">Nothing to summarise. Search for an establishment first.</p>';
+      return;
+    }
+    aiBody.textContent = `Reading ${records.length} inspection${records.length === 1 ? '' : 's'}…`;
+    aiMeta.textContent = '';
+    aiButton.disabled = true;
+    try {
+      const res = await fetch(`${API.base}/summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records })
+      });
+      const body = await readJson(res);
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      renderSummary(body, records.length);
+    } catch (err) {
+      aiBody.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'ai-summary-error';
+      p.textContent = 'Could not generate a summary: ' + err.message;
+      aiBody.appendChild(p);
+    }
+    aiButton.disabled = false;
+  }
+
+  function renderSummary(body, count) {
+    aiBody.innerHTML = '';
+    if (body.overall) {
+      const o = document.createElement('p');
+      o.className = 'ai-summary-overall';
+      o.textContent = body.overall;
+      aiBody.appendChild(o);
+    }
+    (body.summaries || []).forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'ai-summary-item';
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = item.activityNr || '';
+      const what = document.createElement('span');
+      what.className = 'what';
+      what.textContent = item.summary || '';
+      row.append(who, what);
+      aiBody.appendChild(row);
+    });
+    aiMeta.textContent = `${count} inspection${count === 1 ? '' : 's'} · ${new Date().toLocaleTimeString()}`;
+  }
+
+  aiButton.addEventListener('click', generateSummary);
+  document.getElementById('regenerateSummary').addEventListener('click', generateSummary);
+
+  // ---- selecting several inspections at once ----
+  const bulkActions = document.getElementById('bulkActions');
+  const bulkCount = document.getElementById('bulkCount');
+  const selectAllRows = document.getElementById('selectAllRows');
+
+  const selectedRows = () =>
+    [...recordsBody.querySelectorAll('tr.insp-row')].filter(r => r.querySelector('.row-select')?.checked);
+
+  function refreshSelection() {
+    const rows = [...recordsBody.querySelectorAll('tr.insp-row')];
+    const chosen = selectedRows();
+    rows.forEach(r => r.classList.toggle('selected', r.querySelector('.row-select')?.checked));
+    bulkCount.textContent = `${chosen.length} selected`;
+    bulkActions.hidden = chosen.length === 0;
+    selectAllRows.checked = rows.length > 0 && chosen.length === rows.length;
+    selectAllRows.indeterminate = chosen.length > 0 && chosen.length < rows.length;
+  }
+
+  recordsBody.addEventListener('change', (e) => {
+    if (e.target.classList.contains('row-select')) refreshSelection();
+  });
+
+  selectAllRows.addEventListener('change', () => {
+    recordsBody.querySelectorAll('.row-select').forEach(box => { box.checked = selectAllRows.checked; });
+    refreshSelection();
+  });
+
+  document.getElementById('clearSelection').addEventListener('click', () => {
+    recordsBody.querySelectorAll('.row-select').forEach(box => { box.checked = false; });
+    refreshSelection();
+  });
+
+  // One reason covers the whole selection: a broad name returns many unrelated
+  // establishments, and typing the same reason twenty times helps nobody.
+  document.getElementById('deleteSelected').addEventListener('click', () => {
+    const chosen = selectedRows();
+    if (!chosen.length) return;
+    const label = chosen.length === 1
+      ? chosen[0]._label()
+      : `${chosen.length} inspections selected`;
+    openDeleteModal(label, (reason) => {
+      chosen.forEach(row => row._performDelete(reason));
+      refreshSelection();
+    });
+  });
 
   // Records that came from OSHA are read-only: the screen reports the official
   // record, it does not amend it. Inspections added by hand stay editable.
