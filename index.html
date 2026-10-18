@@ -75,16 +75,6 @@
   #estabName { flex: 1 1 260px; min-width: 180px; }
   .case-counts { display: flex; gap: 18px; align-items: baseline; margin-top: 16px; font-size: 12.5px; color: var(--ink-soft); }
   .case-count .n { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--ink); margin-right: 4px; }
-  .ai-summary { border: 1px solid var(--line); border-left: 3px solid var(--link); background: var(--bg-sunken); border-radius: 3px; padding: 10px 14px; margin-top: 14px; }
-  .ai-summary[hidden] { display: none; }
-  .ai-summary-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-  .ai-summary-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
-  .ai-summary-meta { font-size: 11px; color: var(--ink-faint); margin-right: auto; }
-  .ai-summary-overall { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
-  .ai-summary-item { font-size: 12.5px; line-height: 1.45; margin-bottom: 5px; display: flex; gap: 8px; }
-  .ai-summary-item .who { font-weight: 700; white-space: nowrap; }
-  .ai-summary-item .what { color: var(--ink-soft); }
-  .ai-summary-error { font-size: 12.5px; color: var(--danger); }
   .bulk-actions { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; }
   .bulk-actions[hidden] { display: none; }
   .bulk-count { font-weight: 700; color: var(--ink); }
@@ -409,7 +399,7 @@
           <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
           <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, how far the worker fell, and the project itself — type, cost band, construction activity and number of stories. The project detail gives a sense of the scale of work the employer takes on.</dd>
           <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
-          <dt>AI Summary</dt><dd>Summarises the inspections currently on screen in under 50 words each, leading with what bears on risk. Delete the rows that are not this account and regenerate: the summary follows what is displayed.</dd>
+          <dt>AI Summary</dt><dd>Writes a summary of the inspections on screen into Underwriter Notes, under a header marking it as AI generated: under 50 words each, leading with what bears on risk. Running it again replaces that block and leaves anything you typed around it. Delete the rows that are not this account and regenerate to summarise only the remainder. Review it before relying on it.</dd>
           <dt>Delete selected</dt><dd>Tick several inspections and remove them in one step, with one reason covering the lot. A generic name returns many unrelated establishments; the individual Delete still works row by row.</dd>
           <dt>Current / Initial Penalties (inspection)</dt><dd>That inspection's penalties, added up from its own citations: what it stands at now, and what was first proposed. A gap between them usually means a settlement. The Five Year History strip totals both across every inspection shown.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
@@ -495,15 +485,6 @@
       <button class="btn btn-sm btn-danger-ghost" id="deleteSelected" type="button">Delete selected</button>
       <button class="btn-link-sm" id="clearSelection" type="button">Clear</button>
     </span>
-  </div>
-
-  <div class="ai-summary" id="aiSummary" hidden>
-    <div class="ai-summary-head">
-      <span class="ai-summary-title">AI Summary</span>
-      <span class="ai-summary-meta" id="aiSummaryMeta"></span>
-      <button class="btn-link-sm" id="regenerateSummary" type="button">Regenerate</button>
-    </div>
-    <div class="ai-summary-body" id="aiSummaryBody"></div>
   </div>
 
   <div class="inspections-table-wrap" id="inspectionsTableWrap" style="display:none;">
@@ -1180,11 +1161,54 @@
     applyApiData(summaryRow, { fatCat: rec.fatCat });
   }
 
-  // ---- AI summary of whatever is on screen ----
-  const aiPanel = document.getElementById('aiSummary');
-  const aiBody = document.getElementById('aiSummaryBody');
-  const aiMeta = document.getElementById('aiSummaryMeta');
+  // ---- Underwriter Notes: kept in this browser between sessions ----
+  const NOTE_KEY = 'violationsDesk.underwriterNotes';
+  const noteEl = document.getElementById('additionalDetailsNote');
+  const noteMeta = document.getElementById('additionalDetailsMeta');
+
+  function setNoteMeta(text, saved) {
+    noteMeta.textContent = text;
+    noteMeta.classList.toggle('confirmed', !!saved);
+  }
+  try {
+    const saved = localStorage.getItem(NOTE_KEY);
+    if (saved !== null) { noteEl.value = saved; setNoteMeta('Saved', true); }
+  } catch (e) { /* storage unavailable; notes work but will not persist */ }
+
+  noteEl.addEventListener('input', () => setNoteMeta('Not yet saved', false));
+  document.getElementById('saveAdditionalDetails').addEventListener('click', () => {
+    try {
+      localStorage.setItem(NOTE_KEY, noteEl.value);
+      setNoteMeta('Saved', true);
+    } catch (e) {
+      setNoteMeta('Could not save in this browser', false);
+    }
+  });
+
+  // ---- AI summary, written into Underwriter Notes ----
+  // The summary lives in the notes box rather than a panel of its own, so the
+  // underwriter's own words and the generated ones travel together. It is
+  // fenced by a header and footer, so regenerating replaces only that block and
+  // anything typed around it survives.
+  const AI_START = '===== AI SUMMARY — generated by AI, review before use =====';
+  const AI_END = '===== end of AI summary =====';
   const aiButton = document.getElementById('generateSummary');
+
+  function stripExistingSummary(text) {
+    const start = text.indexOf(AI_START);
+    if (start === -1) return text.trim();
+    const end = text.indexOf(AI_END, start);
+    const after = end === -1 ? '' : text.slice(end + AI_END.length);
+    return (text.slice(0, start) + after).trim();
+  }
+
+  function writeSummaryToNotes(block) {
+    const kept = stripExistingSummary(noteEl.value);
+    noteEl.value = block + (kept ? '\n\n' + kept : '');
+    noteEl.dispatchEvent(new Event('input', { bubbles: true }));
+    autosize(noteEl);
+    noteEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 
   // Records are sent as they stand, so deleting one and running again changes
   // the answer: the summary always describes what the underwriter is looking at.
@@ -1196,13 +1220,11 @@
 
   async function generateSummary() {
     const records = summaryPayload();
-    aiPanel.hidden = false;
     if (!records.length) {
-      aiBody.innerHTML = '<p class="ai-summary-error">Nothing to summarise. Search for an establishment first.</p>';
+      setStatus('Nothing to summarise. Search for an establishment first.', true);
       return;
     }
-    aiBody.textContent = `Reading ${records.length} inspection${records.length === 1 ? '' : 's'}…`;
-    aiMeta.textContent = '';
+    setStatus(`Summarising ${records.length} inspection${records.length === 1 ? '' : 's'}…`);
     aiButton.disabled = true;
     try {
       const res = await fetch(`${API.base}/summary`, {
@@ -1212,42 +1234,25 @@
       });
       const body = await readJson(res);
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-      renderSummary(body, records.length);
+
+      const stamp = new Date().toLocaleString('en-US', {
+        month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit'
+      });
+      const lines = [AI_START, `${records.length} inspection${records.length === 1 ? '' : 's'} · ${stamp}`, ''];
+      if (body.overall) lines.push(body.overall, '');
+      (body.summaries || []).forEach(item => {
+        lines.push(`${item.activityNr || ''}: ${item.summary || ''}`.trim());
+      });
+      lines.push(AI_END);
+      writeSummaryToNotes(lines.join('\n'));
+      setStatus(`Summary written to Underwriter Notes · ${records.length} inspection${records.length === 1 ? '' : 's'}`);
     } catch (err) {
-      aiBody.innerHTML = '';
-      const p = document.createElement('p');
-      p.className = 'ai-summary-error';
-      p.textContent = 'Could not generate a summary: ' + err.message;
-      aiBody.appendChild(p);
+      setStatus('Could not generate a summary: ' + err.message, true);
     }
     aiButton.disabled = false;
   }
 
-  function renderSummary(body, count) {
-    aiBody.innerHTML = '';
-    if (body.overall) {
-      const o = document.createElement('p');
-      o.className = 'ai-summary-overall';
-      o.textContent = body.overall;
-      aiBody.appendChild(o);
-    }
-    (body.summaries || []).forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'ai-summary-item';
-      const who = document.createElement('span');
-      who.className = 'who';
-      who.textContent = item.activityNr || '';
-      const what = document.createElement('span');
-      what.className = 'what';
-      what.textContent = item.summary || '';
-      row.append(who, what);
-      aiBody.appendChild(row);
-    });
-    aiMeta.textContent = `${count} inspection${count === 1 ? '' : 's'} · ${new Date().toLocaleTimeString()}`;
-  }
-
   aiButton.addEventListener('click', generateSummary);
-  document.getElementById('regenerateSummary').addEventListener('click', generateSummary);
 
   // ---- selecting several inspections at once ----
   const bulkActions = document.getElementById('bulkActions');
