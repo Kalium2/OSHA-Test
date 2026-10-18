@@ -777,6 +777,101 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
 }
 
 // ---------- HTTP ----------
+/**
+ * Underwriting summary of the records currently on screen. The page posts the
+ * records it is showing, so deleting one and running again changes the answer.
+ * Needs an ANTHROPIC_API_KEY secret on this Worker; without it the endpoint
+ * says so plainly rather than failing quietly.
+ */
+const SUMMARY_SYSTEM = [
+  'You summarise OSHA inspection records for a commercial insurance underwriter.',
+  'For each inspection return one summary of UNDER 50 WORDS covering only what bears on risk:',
+  'the worst citation types, whether anyone died or was seriously hurt, the hazard involved,',
+  'whether penalties were reduced on settlement, and whether the hazard was abated.',
+  'Lead with the most serious fact. Do not repeat the establishment name, dates or the activity number.',
+  'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
+  'Return JSON only: {"summaries":[{"activityNr":"...","summary":"..."}],"overall":"..."}',
+  'where "overall" is one sentence of under 40 words on the pattern across all the inspections.'
+].join(' ');
+
+// Only the fields that bear on the summary, so the prompt stays small.
+function summaryInput(rec) {
+  return {
+    activityNr: rec.activityNr,
+    opened: rec.dateOpened,
+    status: rec.caseStatus,
+    inspectionType: rec.inspectionType,
+    fatality: rec.fatCat ? 'yes' : 'no',
+    counts: rec.counts,
+    penalties: rec.penalties,
+    emphasisPrograms: rec.emphasisPrograms || undefined,
+    citations: (rec.violationItems || []).slice(0, 12).map(v => ({
+      type: v.citationType,
+      initialType: v.initialCitationType,
+      standard: v.standardCited,
+      currentPenalty: v.currentPenalty,
+      initialPenalty: v.initialPenalty,
+      abatement: v.abateComplete || undefined,
+      promptedBy: v.prompted || undefined,
+      accidentRelated: v.accidentRelated || undefined,
+      text: (v.standardDetails || '').slice(0, 300) || undefined
+    })),
+    investigation: rec.investigation ? {
+      narrative: (rec.investigation.narrative || '').slice(0, 600),
+      injured: (rec.investigation.injured || []).slice(0, 3).map(i => ({
+        age: i.age, sex: i.sex, degree: i.degreeOfInjury,
+        nature: i.natureOfInjury, occupation: i.occupation
+      }))
+    } : undefined
+  };
+}
+
+async function summarise(request, env) {
+  if (!env.ANTHROPIC_API_KEY) {
+    return json({ error: 'Summaries are not configured on this service (no model credential).' }, request, env, 501);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Expected a JSON body of records' }, request, env, 400);
+  }
+  const records = Array.isArray(body?.records) ? body.records : [];
+  if (!records.length) return json({ error: 'No records to summarise' }, request, env, 400);
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: env.SUMMARY_MODEL || 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: SUMMARY_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: 'Summarise these inspections:\n' + JSON.stringify(records.slice(0, 25).map(summaryInput))
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 300);
+    return json({ error: `The model service returned ${res.status}`, detail }, request, env, 502);
+  }
+
+  const data = await res.json();
+  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+  try {
+    const parsed = JSON.parse(text.replace(/^```(?:json)?|```$/g, '').trim());
+    return json({ ...parsed, generated: new Date().toISOString() }, request, env);
+  } catch {
+    return json({ summaries: [], overall: text, generated: new Date().toISOString() }, request, env);
+  }
+}
+
 function corsHeaders(request, env) {
   const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   const origin = request.headers.get('Origin') || '';
@@ -798,8 +893,15 @@ export default {
 
     if (request.method === 'OPTIONS') {
       return new Response(null, {
-        headers: { ...corsHeaders(request, env), 'Access-Control-Allow-Methods': 'GET, OPTIONS' }
+        headers: {
+          ...corsHeaders(request, env),
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        }
       });
+    }
+    if (request.method === 'POST' && url.pathname === '/summary') {
+      return summarise(request, env);
     }
     if (request.method !== 'GET') return json({ error: 'GET only' }, request, env, 405);
     if (url.pathname === '/health') {
