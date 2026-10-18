@@ -204,10 +204,10 @@
   /* fixed column widths for the results tables (live + deleted) */
   table.inspections-table thead th:nth-child(1) { width: 52px; }   /* # */
   table.inspections-table thead th:nth-child(2) { width: 112px; }  /* Inspection */
-  table.inspections-table thead th:nth-child(3) { width: 102px; }  /* Case Status */
-  table.inspections-table thead th:nth-child(4) { width: 52px; }   /* ST */
-  table.inspections-table thead th:nth-child(n+5):nth-child(-n+9) { width: 68px; }  /* counts + Fatality */
-  table.inspections-table thead th:nth-child(10) { width: 110px; } /* Current Penalty Total */
+  table.inspections-table thead th:nth-child(4) { width: 102px; }  /* Case Status */
+  table.inspections-table thead th:nth-child(5) { width: 62px; }   /* State */
+  table.inspections-table thead th:nth-child(n+6):nth-child(-n+10) { width: 68px; }  /* counts + Fatality */
+  table.inspections-table thead th:nth-child(11) { width: 104px; } /* Current Penalty */
   table.inspections-table thead th:nth-child(12) { width: 102px; } /* Date Opened */
   table.inspections-table thead th:nth-child(13) { width: 102px; } /* Date Closed */
   table.inspections-table thead th:nth-child(14) { width: 80px; }  /* Delete */
@@ -216,7 +216,9 @@
   table.inspections-table td > .f-input { width: 100%; min-width: 0; }
   table.inspections-table td.num { font-family: var(--mono); text-align: right; }
 
-  .fatcat-box { min-height: 28px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg-sunken); display: flex; align-items: center; justify-content: center; padding: 2px; }
+  .fatcat-box { min-height: 24px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg-sunken); display: flex; align-items: center; justify-content: center; padding: 2px; }
+  .fatcat-box.from-api { border-color: transparent; background: none; min-height: 0; }
+  .fatcat-box.fatcat-yes { font-weight: 700; color: var(--danger); }
   .fatcat-tag { font-size: 9.5px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
   tr.insp-row:hover { background: var(--bg-sunken); }
   tr.insp-row.expanded { background: var(--bg-sunken); }
@@ -386,12 +388,12 @@
           <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
           <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, how far the worker fell, and the project itself — type, cost band, construction activity and number of stories. The project detail gives a sense of the scale of work the employer takes on.</dd>
           <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
-          <dt>Current Penalty Total</dt><dd>The inspection's current penalties, added up from its citations. Updates as citation penalties are edited.</dd>
+          <dt>Current Penalty</dt><dd>The inspection's current penalties, added up from its own citations. The Five Year History strip totals these across every inspection shown.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
           <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
           <dt>Emphasis Programs</dt><dd>An emphasis program is a hazard OSHA has decided to go looking for, set out in a directive and worked through planned inspections. A value here means this inspection was targeted, not routine: OSHA arrived expecting to find that hazard in that industry. National Emphasis Programs run countrywide (silica, trenching, heat, warehousing); Local and Regional ones are set by an area office; Strategic Plan and Primary Emphasis codes mark OSHA's own priority work. For underwriting this is context the citation count alone does not give: a clean result under a targeted inspection carries more weight than a clean routine visit, and a cited one under a program that matches the account's own exposure is a stronger signal. Named programs beside the code are maintained by the business; an unrecognised code shows as published.</dd>
           <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount at the site, private or government employer, whether migrant labor was involved, and whether the workforce was represented.</dd>
-          <dt>Fatality</dt><dd>Someone died: either the accident record carries a fatality, or an injury is recorded as one. The inspection type is not used, so an accident or Fat/Cat inspection where nobody died is not flagged. Citations arising from the accident sort to the top of the inspection and carry an ACCIDENT marker.</dd>
+          <dt>Fatality</dt><dd>Reads Yes where someone died: either the accident record carries a fatality, or an injury is recorded as one. The inspection type is not used, so an accident or Fat/Cat inspection where nobody died is not flagged. Citations arising from the accident sort to the top of the inspection and carry an ACCIDENT marker.</dd>
           <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
           <dt>Five Year History</dt><dd>Citation counts and penalty totals across all inspections shown. Deleted inspections are excluded.</dd>
           <dt>Gravity</dt><dd>OSHA's severity score for a serious violation, 1 to 10. Higher means a more severe hazard.</dd>
@@ -473,15 +475,15 @@
         <tr>
           <th>#</th>
           <th>Inspection</th>
-                    <th data-sort="caseStatus">Case Status <span class="sort-ind"></span></th>
-          <th data-sort="state">ST <span class="sort-ind"></span></th>
+                    <th>Establishment Name</th>
+              <th data-sort="caseStatus">Case Status <span class="sort-ind"></span></th>
+          <th data-sort="state">State <span class="sort-ind"></span></th>
           <th class="num" data-sort="serious">Serious <span class="sort-ind"></span></th>
           <th class="num" data-sort="willful">Willful <span class="sort-ind"></span></th>
           <th class="num" data-sort="repeat">Repeat <span class="sort-ind"></span></th>
           <th class="fatcat-col" data-sort="fatcat">Fatality <span class="sort-ind"></span></th>
           <th class="num" data-sort="other">Other <span class="sort-ind"></span></th>
-          <th class="num" data-sort="currentTotal">Current Penalty Total <span class="sort-ind"></span></th>
-              <th>Establishment Name</th>
+          <th class="num" data-sort="currentTotal">Current Penalty <span class="sort-ind"></span></th>
           <th data-sort="dateOpened">Date Opened <span class="sort-ind"></span></th>
               <th>Date Closed</th>
           <th class="act-col"></th>
@@ -500,15 +502,15 @@
             <tr>
               <th>#</th>
               <th>Activity</th>
-                            <th data-sort="caseStatus">Case Status <span class="sort-ind"></span></th>
-              <th data-sort="state">ST <span class="sort-ind"></span></th>
+                            <th>Establishment Name</th>
+              <th data-sort="caseStatus">Case Status <span class="sort-ind"></span></th>
+              <th data-sort="state">State <span class="sort-ind"></span></th>
               <th class="num" data-sort="serious">Serious <span class="sort-ind"></span></th>
               <th class="num" data-sort="willful">Willful <span class="sort-ind"></span></th>
               <th class="num" data-sort="repeat">Repeat <span class="sort-ind"></span></th>
               <th class="fatcat-col" data-sort="fatcat">Fatality <span class="sort-ind"></span></th>
               <th class="num" data-sort="other">Other <span class="sort-ind"></span></th>
-              <th class="num" data-sort="currentTotal">Current Penalty Total <span class="sort-ind"></span></th>
-              <th>Establishment Name</th>
+              <th class="num" data-sort="currentTotal">Current Penalty <span class="sort-ind"></span></th>
               <th data-sort="dateOpened">Date Opened <span class="sort-ind"></span></th>
               <th>Date Closed</th>
               <th class="act-col"></th>
@@ -888,6 +890,7 @@
     summaryRow.innerHTML =
       '<td class="insp-cell-num"><span class="insp-chevron" data-action="toggle-row">▶</span>' + n + '</td>' +
       '<td><input class="f-input activity-link f-sm" type="text" placeholder="e.g. 1844208.015"></td>' +
+      '<td><textarea class="f-input f-establishment" placeholder="Establishment name" rows="1"></textarea></td>' +
       '<td><input class="f-input case-status-input f-sm" type="text" placeholder="OPEN / CLOSED"></td>' +
       '<td><input class="f-input f-state f-sm" type="text" placeholder="CA"></td>' +
       '<td class="num"><input class="f-input f-num f-sm" type="text" value="0" data-cat="serious"></td>' +
@@ -896,7 +899,6 @@
       '<td class="fatcat-cell"><div class="fatcat-box"></div></td>' +
       '<td class="num"><input class="f-input f-num f-sm" type="text" value="0" data-cat="other"></td>' +
       '<td class="num pen-total"><span class="pen-total-value">$0</span></td>' +
-      '<td><textarea class="f-input f-establishment" placeholder="Establishment name" rows="1"></textarea></td>' +
       '<td><input class="f-input f-dateOpened f-sm" type="text" placeholder="MM/DD/YYYY"></td>' +
       '<td><input class="f-input f-dateClosed f-sm" type="text" placeholder="MM/DD/YYYY"></td>' +
       '<td><button class="btn btn-sm btn-danger-ghost" data-action="delete-record" type="button">Delete</button></td>';
@@ -997,13 +999,9 @@
     summaryRow.dataset.fatcat = on ? '1' : '';
 
     const cell = summaryRow.querySelector('.fatcat-box');
-    cell.textContent = '';
-    if (on) {
-      const tag = document.createElement('span');
-      tag.className = 'fatcat-tag';
-      tag.textContent = label;
-      cell.appendChild(tag);
-    }
+    cell.textContent = on ? 'Yes' : '';
+    cell.classList.toggle('fatcat-yes', on);
+    cell.classList.add('from-api');   // no wireframe outline on a retrieved record
 
     recalcAgg();
   }
