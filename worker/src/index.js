@@ -877,12 +877,51 @@ async function summarise(request, env) {
  * publishes no general duty text. Asked for in one batch per search and
  * cached at the edge, since a standard's meaning does not change.
  */
+/**
+ * OSHA stores a cited standard in its own packed form: "19100037 B06" is
+ * 29 CFR 1910.37(b)(6), and "5A0001" is section 5(a)(1) of the Act. The model
+ * knows the published citation, not the packed one, so translate before asking.
+ */
+function normaliseStandard(raw) {
+  const value = String(raw || '').trim().toUpperCase();
+  if (!value) return '';
+  if (/^5A0*1$/.test(value.replace(/\s+/g, ''))) return 'Section 5(a)(1) of the OSH Act (general duty clause)';
+
+  const [numeric, ...rest] = value.split(/\s+/);
+  let head = numeric;
+
+  // 19100037 -> 1910.37 ; 19260501 -> 1926.501
+  const packed = numeric.match(/^(19\d{2})(\d+)$/);
+  if (packed) {
+    const section = packed[2].replace(/^0+/, '') || '0';
+    head = packed[1] + '.' + section;
+  } else if (!/^\d/.test(numeric)) {
+    return value;   // not a federal citation; pass it through as given
+  }
+
+  // B06 -> (b)(6) ; A01 -> (a)(1) ; IV -> (IV)
+  const suffix = rest.map(part => {
+    const m = part.match(/^([A-Z])(\d+)$/);
+    if (m) return '(' + m[1].toLowerCase() + ')(' + String(Number(m[2])) + ')';
+    if (/^[IVX]+$/.test(part)) return '(' + part + ')';
+    if (/^[A-Z]$/.test(part)) return '(' + part.toLowerCase() + ')';
+    if (/^\d+$/.test(part)) return '(' + String(Number(part)) + ')';
+    return '(' + part.toLowerCase() + ')';
+  }).join('');
+
+  return packed ? '29 CFR ' + head + suffix : head + suffix;
+}
+
 const STANDARD_SYSTEM = [
   'You explain OSHA standards to a commercial insurance underwriter.',
   'For each standard given, provide a concise and direct summary of what the standard requires.',
   'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
-  'Do not restate the standard number. Do not speculate: if a standard is not recognised, return an empty string for it.',
-  'Return JSON only: {"definitions":{"<standard as given>":"<summary>"}}'
+  'Do not restate the standard number.',
+  'Each line gives OSHAs stored code, then the published citation it refers to. Answer for the published citation.',
+  'A code that is not a federal 29 CFR citation is usually a state plan standard, such as California Title 8. Summarise it where you know it.',
+  'Only where a standard is genuinely unknown to you, return an empty string for it. Never invent a requirement.',
+  'Key each result by the stored code exactly as given, not by the published citation.',
+  'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
 ].join(' ');
 
 async function describeStandards(request, env) {
@@ -895,10 +934,24 @@ async function describeStandards(request, env) {
   } catch {
     return json({ error: 'Expected a JSON body of standards' }, request, env, 400);
   }
-  const standards = [...new Set((body?.standards || [])
-    .map(x => String(x || '').trim())
-    .filter(Boolean))].slice(0, 40);
+  // Accepts plain codes, or { standard, state } where the state matters: a code
+  // that is not a federal citation belongs to that state's own plan.
+  const seen = new Set();
+  const standards = [];
+  (body?.standards || []).forEach(entry => {
+    const code = String((entry && entry.standard) ?? entry ?? '').trim();
+    if (!code || seen.has(code)) return;
+    seen.add(code);
+    standards.push({ code, state: String(entry?.state || '').trim().toUpperCase() });
+  });
+  standards.splice(40);
   if (!standards.length) return json({ definitions: {} }, request, env);
+
+  const asLine = ({ code, state }) => {
+    const published = normaliseStandard(code);
+    if (published && published !== code) return code + '  =  ' + published;
+    return code + '  =  ' + (state ? state + ' state plan standard ' + code : 'state plan standard ' + code);
+  };
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -913,7 +966,9 @@ async function describeStandards(request, env) {
       system: STANDARD_SYSTEM,
       messages: [{
         role: 'user',
-        content: 'Provide a concise and direct summary of each of these OSHA standards:\n' + standards.join('\n')
+        content: 'Provide a concise and direct summary of each of these OSHA standards.\n'
+          + 'Each line is: <stored code>  =  <published citation>\n\n'
+          + standards.map(asLine).join('\n')
       }]
     })
   });
