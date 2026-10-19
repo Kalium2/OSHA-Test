@@ -882,6 +882,33 @@ async function summarise(request, env) {
  * 29 CFR 1910.37(b)(6), and "5A0001" is section 5(a)(1) of the Act. The model
  * knows the published citation, not the packed one, so translate before asking.
  */
+// State plans publish their own codes. Naming the regulation makes a bare
+// section number identifiable; without it, "3314(G)" could be anyone's.
+const STATE_PLAN_TITLES = {
+  CA: 'California Code of Regulations, Title 8',
+  MI: 'Michigan Occupational Safety and Health Standards',
+  OR: 'Oregon Administrative Rules, Chapter 437',
+  WA: 'Washington Administrative Code, Chapter 296',
+  NC: 'North Carolina Occupational Safety and Health Standards',
+  KY: 'Kentucky Occupational Safety and Health Standards',
+  MN: 'Minnesota Rules, Chapter 5205',
+  NV: 'Nevada Administrative Code, Chapter 618',
+  TN: 'Tennessee Occupational Safety and Health Standards',
+  UT: 'Utah Administrative Code, R614',
+  VA: 'Virginia Occupational Safety and Health Standards',
+  SC: 'South Carolina Occupational Safety and Health Standards',
+  MD: 'Maryland Occupational Safety and Health Standards',
+  AZ: 'Arizona Administrative Code, Title 20 Chapter 5',
+  IN: 'Indiana Occupational Safety and Health Standards',
+  IA: 'Iowa Administrative Code, Chapter 875',
+  HI: 'Hawaii Administrative Rules, Title 12',
+  AK: 'Alaska Administrative Code, Title 8',
+  NM: 'New Mexico Administrative Code, Title 11',
+  VT: 'Vermont Occupational Safety and Health Standards',
+  PR: 'Puerto Rico Occupational Safety and Health Standards',
+  WY: 'Wyoming Occupational Health and Safety Rules'
+};
+
 function normaliseStandard(raw) {
   const value = String(raw || '').trim().toUpperCase();
   if (!value) return '';
@@ -917,10 +944,11 @@ const STANDARD_SYSTEM = [
   'For each standard given, provide a concise and direct summary of what the standard requires.',
   'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
   'Do not restate the standard number.',
-  'Each line gives OSHAs stored code, then the published citation it refers to. Answer for the published citation.',
-  'A code that is not a federal 29 CFR citation is usually a state plan standard, such as California Title 8. Summarise it where you know it.',
-  'Only where a standard is genuinely unknown to you, return an empty string for it. Never invent a requirement.',
-  'Key each result by the stored code exactly as given, not by the published citation.',
+  'Each line gives OSHAs stored code, then the citation it refers to. Answer for that citation.',
+  'Many are state plan standards rather than federal 29 CFR: the line names the regulation, for example the California Code of Regulations, Title 8. Answer those the same way.',
+  'Give a summary for every standard listed. Where you are not certain of the exact wording, state the subject the section governs instead, phrased as a requirement.',
+  'Return an empty string only when you cannot identify the subject of the section at all. Do not fabricate specific numbers, limits or dates.',
+  'Key each result by the stored code exactly as given, not by the citation.',
   'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
 ].join(' ');
 
@@ -950,6 +978,8 @@ async function describeStandards(request, env) {
   const asLine = ({ code, state }) => {
     const published = normaliseStandard(code);
     if (published && published !== code) return code + '  =  ' + published;
+    const title = STATE_PLAN_TITLES[state];
+    if (title) return code + '  =  ' + title + ', Section ' + code;
     return code + '  =  ' + (state ? state + ' state plan standard ' + code : 'state plan standard ' + code);
   };
 
