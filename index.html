@@ -208,17 +208,17 @@
   table.inspections-table td { padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
   table.inspections-table tr.insp-detail-row > td { overflow: visible; white-space: normal; }
   /* fixed column widths for the results tables (live + deleted) */
-  table.inspections-table th.sel-col { width: 30px; }
+  table.inspections-table th.sel-col { width: 32px; }
   table.inspections-table td.sel-col { text-align: center; }
-  table.inspections-table thead th:nth-child(2) { width: 46px; }   /* # */
-  table.inspections-table thead th:nth-child(3) { width: 112px; }  /* Inspection */
-  table.inspections-table thead th:nth-child(5) { width: 100px; }  /* Case Status */
-  table.inspections-table thead th:nth-child(6) { width: 60px; }   /* State */
-  table.inspections-table thead th:nth-child(n+7):nth-child(-n+11) { width: 66px; }  /* counts + Fatality */
-  table.inspections-table thead th:nth-child(12) { width: 98px; }  /* Current Penalties */
-  table.inspections-table thead th:nth-child(13) { width: 94px; }  /* Initial Penalties */
-  table.inspections-table thead th:nth-child(14) { width: 98px; }  /* Date Opened */
-  table.inspections-table thead th:nth-child(15) { width: 98px; }  /* Date Closed */
+  table.inspections-table thead th:nth-child(1) { width: 52px; }   /* # */
+  table.inspections-table thead th:nth-child(2) { width: 112px; }  /* Inspection */
+  table.inspections-table thead th:nth-child(4) { width: 100px; }  /* Case Status */
+  table.inspections-table thead th:nth-child(5) { width: 60px; }   /* State */
+  table.inspections-table thead th:nth-child(n+6):nth-child(-n+10) { width: 66px; }  /* counts + Fatality */
+  table.inspections-table thead th:nth-child(11) { width: 98px; }  /* Current Penalties */
+  table.inspections-table thead th:nth-child(12) { width: 94px; }  /* Initial Penalties */
+  table.inspections-table thead th:nth-child(13) { width: 98px; }  /* Date Opened */
+  table.inspections-table thead th:nth-child(14) { width: 98px; }  /* Date Closed */
   table.inspections-table thead th:nth-child(16) { width: 76px; }  /* Delete */
   table.inspections-table td.pen-total { font-family: var(--mono); font-weight: 700; color: var(--link); }
   table.inspections-table td.pen-initial { font-weight: 400; color: var(--ink-soft); }
@@ -232,7 +232,7 @@
   .fatcat-tag { font-size: 9.5px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
   tr.insp-row:hover { background: var(--bg-sunken); }
   tr.insp-row.expanded { background: var(--bg-sunken); }
-  tr.insp-row .insp-cell-num { display: flex; align-items: center; gap: 6px; font-family: var(--mono); }
+  tr.insp-row .insp-cell-num { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink); }
   .insp-chevron { font-size: 9px; color: var(--ink-faint); display: inline-block; transition: transform 0.15s ease; flex: none; cursor: pointer; }
   tr.insp-row.expanded .insp-chevron { transform: rotate(90deg); }
   .activity-link { color: var(--link); text-decoration: none; font-weight: 600; }
@@ -271,6 +271,8 @@
   tr.citations-row > td { border-bottom: none; }
   tr.citation-def-row > td { padding-top: 0; padding-bottom: 8px; }
   .cit-def { display: flex; align-items: flex-start; gap: 8px; }
+  .ai-tag { font-size: 9px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 2px 5px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.03em; white-space: nowrap; }
+  .ai-tag[hidden] { display: none; }
   tr.citations-row.accident-related td { background: var(--danger-bg); }
   tr.citations-row .row-num { white-space: nowrap; }
   .cit-flag { display: block; width: fit-content; font-size: 9px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 1px 4px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.02em; white-space: nowrap; }
@@ -356,6 +358,11 @@
   .modal-box h3 { margin: 0 0 6px; font-size: 14.5px; font-weight: 700; color: var(--ink); }
   .modal-sub { margin: 0 0 14px; font-size: 12.5px; color: var(--ink-soft); }
   .modal-box label { display: block; font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+  .modal-label { font-size: 12px; font-weight: 700; color: var(--ink); margin: 0 0 8px; }
+  .reason-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+  .reason-option { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 400; cursor: pointer; margin: 0; }
+  .reason-option input { margin: 0; }
+  #deleteReasonNote[hidden] { display: none; }
   .modal-box label .req { color: var(--danger); }
   .modal-box textarea {
     width: 100%; min-height: 80px; resize: none; overflow: hidden; font-family: var(--sans); font-size: 12.5px;
@@ -369,8 +376,8 @@
 
   @media (max-width: 1100px) {
     /* keep Establishment Name usable on narrow screens: drop the Last Run column */
-    table.inspections-table thead th:nth-child(15),
-    table.inspections-table tr.insp-row > td:nth-child(15) { display: none; }
+    table.inspections-table thead th:nth-child(14),
+    table.inspections-table tr.insp-row > td:nth-child(14) { display: none; }
   }
   @media (max-width: 760px) {
     .agg-strip.visible { grid-template-columns: repeat(4, 1fr); }
@@ -401,6 +408,7 @@
           <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
           <dt>AI Summary</dt><dd>Writes a summary of the inspections on screen into Underwriter Notes, under a header marking it as AI generated: under 50 words each, leading with what bears on risk. Running it again replaces that block and leaves anything you typed around it. Delete the rows that are not this account and regenerate to summarise only the remainder. Review it before relying on it.</dd>
           <dt>Delete selected</dt><dd>Tick several inspections and remove them in one step, with one reason covering the lot. A generic name returns many unrelated establishments; the individual Delete still works row by row.</dd>
+          <dt>Reason for deletion</dt><dd>Pick one: Wrong insured, Duplicate entry, Data issue or Other. The last two also need a sentence saying what was wrong, so the record stays usable later.</dd>
           <dt>Current / Initial Penalties (inspection)</dt><dd>That inspection's penalties, added up from its own citations: what it stands at now, and what was first proposed. A gap between them usually means a settlement. The Five Year History strip totals both across every inspection shown.</dd>
           <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
           <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
@@ -423,7 +431,7 @@
           <dt>Open / closed counts</dt><dd>An inspection with no close date is still open.</dd>
           <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and by industry.</dd>
           <dt>Show empty fields</dt><dd>Fields OSHA returned blank are hidden. Tick this to see them all, for manual entry.</dd>
-          <dt>Standard Cited</dt><dd>The OSHA standard behind the citation; the line underneath carries its text.</dd>
+          <dt>Standard Cited</dt><dd>The OSHA standard behind the citation; the line underneath carries its text. Where OSHA publishes none, a short AI summary of what the standard requires is filled in and marked AI.</dd>
           <dt>Underwriter Notes</dt><dd>Record your notes on any Serious, Willful, Repeat, and FAT/CAT's. Detail information from agent's or loss control.</dd>
           <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other. Current and initial penalties roll up into Five Year History.</dd>
           <dt>Why No Inspection</dt><dd>Where OSHA opened a case but did not inspect, the reason: out of business, denied entry, too few employees, and so on.</dd>
@@ -491,7 +499,6 @@
     <table class="inspections-table">
       <thead>
         <tr>
-          <th class="sel-col"><input type="checkbox" id="selectAllRows" aria-label="Select all inspections"></th>
           <th>#</th>
           <th>Inspection</th>
                     <th>Establishment Name</th>
@@ -506,6 +513,7 @@
               <th class="num" data-sort="initialTotal">Initial Penalties <span class="sort-ind"></span></th>
           <th data-sort="dateOpened">Date Opened <span class="sort-ind"></span></th>
               <th>Date Closed</th>
+          <th class="sel-col"><input type="checkbox" id="selectAllRows" aria-label="Select all inspections"></th>
           <th class="act-col"></th>
         </tr>
       </thead>
@@ -664,6 +672,7 @@
       </table>
     </div>
     <div class="cit-def">
+      <span class="ai-tag" hidden>AI</span>
       <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
     </div>
     <div class="cit-extra">
@@ -684,8 +693,17 @@
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
     <h3 id="deleteModalTitle">Delete inspection record?</h3>
     <p class="modal-sub" id="deleteModalSub"></p>
-    <label for="deleteReasonInput">Reason for deletion <span class="req">*</span></label>
-    <textarea id="deleteReasonInput" placeholder="Explain why this inspection record is being deleted…"></textarea>
+    <p class="modal-label">Reason for deletion <span class="req">*</span></p>
+    <div class="reason-list" id="deleteReasonList">
+      <label class="reason-option"><input type="radio" name="deleteReason" value="Wrong insured"> Wrong insured</label>
+      <label class="reason-option"><input type="radio" name="deleteReason" value="Duplicate entry"> Duplicate entry</label>
+      <label class="reason-option"><input type="radio" name="deleteReason" value="Data issue" data-needs-note="true"> Data issue</label>
+      <label class="reason-option"><input type="radio" name="deleteReason" value="Other" data-needs-note="true"> Other</label>
+    </div>
+    <div id="deleteReasonNote" hidden>
+      <label class="modal-label" for="deleteReasonInput">Explain <span class="req">*</span></label>
+      <textarea id="deleteReasonInput" placeholder="What is wrong with the data, or why is it being removed?"></textarea>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="deleteModalCancel" type="button">Cancel</button>
       <button class="btn btn-sm btn-danger-solid" id="deleteModalConfirm" type="button" disabled>Delete</button>
@@ -721,27 +739,56 @@
   const deleteModalConfirm = document.getElementById('deleteModalConfirm');
   let pendingDeleteCallback = null;
 
+  const deleteReasonList = document.getElementById('deleteReasonList');
+  const deleteReasonNote = document.getElementById('deleteReasonNote');
+
+  const chosenReason = () => deleteReasonList.querySelector('input[name="deleteReason"]:checked');
+
+  // Fixed reasons keep the data consistent; the two open-ended ones still need
+  // a sentence, because "Data issue" or "Other" on its own explains nothing.
+  function reasonText() {
+    const picked = chosenReason();
+    if (!picked) return '';
+    const note = deleteReasonInput.value.trim();
+    if (picked.dataset.needsNote === 'true') {
+      return note ? `${picked.value}: ${note}` : '';
+    }
+    return picked.value;
+  }
+
+  function refreshDeleteModal() {
+    const picked = chosenReason();
+    const needsNote = picked?.dataset.needsNote === 'true';
+    deleteReasonNote.hidden = !needsNote;
+    if (needsNote) autosize(deleteReasonInput);
+    deleteModalConfirm.disabled = !reasonText();
+  }
+
   function openDeleteModal(label, onConfirm) {
     pendingDeleteCallback = onConfirm;
     deleteModalSub.textContent = label;
+    deleteReasonList.querySelectorAll('input[name="deleteReason"]').forEach(r => { r.checked = false; });
     deleteReasonInput.value = '';
+    deleteReasonNote.hidden = true;
     deleteModalConfirm.disabled = true;
     deleteModalOverlay.style.display = 'flex';
-    deleteReasonInput.focus();
+    deleteReasonList.querySelector('input').focus();
   }
   function closeDeleteModal() {
     deleteModalOverlay.style.display = 'none';
     pendingDeleteCallback = null;
   }
-  deleteReasonInput.addEventListener('input', () => {
-    deleteModalConfirm.disabled = deleteReasonInput.value.trim().length === 0;
+  deleteReasonList.addEventListener('change', () => {
+    refreshDeleteModal();
+    if (!deleteReasonNote.hidden) deleteReasonInput.focus();
   });
+  deleteReasonInput.addEventListener('input', refreshDeleteModal);
   deleteModalCancel.addEventListener('click', closeDeleteModal);
   deleteModalOverlay.addEventListener('click', (e) => {
     if (e.target === deleteModalOverlay) closeDeleteModal();
   });
   deleteModalConfirm.addEventListener('click', () => {
-    const reason = deleteReasonInput.value.trim();
+    const reason = reasonText();
     if (!reason || !pendingDeleteCallback) return;
     const cb = pendingDeleteCallback;
     closeDeleteModal();
@@ -782,6 +829,7 @@
     document.getElementById('countTotal').textContent = rows.length;
     document.getElementById('countOpen').textContent = t.open;
     document.getElementById('countClosed').textContent = t.closed;
+    renumberInspections();
     if (typeof refreshSelection === 'function') refreshSelection();
     document.getElementById('caseCounts').style.display = 'flex';
     aggStrip.classList.add('visible');
@@ -911,7 +959,6 @@
     summaryRow.dataset.currPenalty = 0; summaryRow.dataset.origPenalty = 0;
 
     summaryRow.innerHTML =
-      '<td class="sel-col"><input type="checkbox" class="row-select" aria-label="Select inspection"></td>' +
       '<td class="insp-cell-num"><span class="insp-chevron" data-action="toggle-row">▶</span>' + n + '</td>' +
       '<td><input class="f-input activity-link f-sm" type="text" placeholder="e.g. 1844208.015"></td>' +
       '<td><textarea class="f-input f-establishment" placeholder="Establishment name" rows="1"></textarea></td>' +
@@ -926,6 +973,7 @@
       '<td class="num pen-total pen-initial"><span class="pen-initial-value">$0</span></td>' +
       '<td><input class="f-input f-dateOpened f-sm" type="text" placeholder="MM/DD/YYYY"></td>' +
       '<td><input class="f-input f-dateClosed f-sm" type="text" placeholder="MM/DD/YYYY"></td>' +
+      '<td class="sel-col"><input type="checkbox" class="row-select" aria-label="Select inspection"></td>' +
       '<td><button class="btn btn-sm btn-danger-ghost" data-action="delete-record" type="button">Delete</button></td>';
 
     const activityInput = summaryRow.querySelector('.activity-link');
@@ -1185,6 +1233,61 @@
     }
   });
 
+  // ---- standards OSHA did not publish text for ----
+  // The citation carries the standard number but no description. One batched
+  // request per search fills those in, marked AI so the summary is never taken
+  // for OSHA's own wording.
+  const standardCache = new Map();
+
+  function citationsMissingText() {
+    return [...recordsBody.querySelectorAll('.citation-block')].filter(block => {
+      const def = block.querySelector('.f-stdDefinition');
+      const std = block.querySelector('[data-field="standardCited"]');
+      return def && std && !def.value.trim() && std.value.trim();
+    });
+  }
+
+  function applyStandardText(block, text) {
+    const def = block.querySelector('.f-stdDefinition');
+    const tag = block.querySelector('.ai-tag');
+    def.value = text;
+    if (tag) tag.hidden = false;
+    autosize(def);
+  }
+
+  async function fillMissingStandards() {
+    const blocks = citationsMissingText();
+    if (!blocks.length) return;
+
+    const pending = [];
+    blocks.forEach(block => {
+      const std = block.querySelector('[data-field="standardCited"]').value.trim();
+      if (standardCache.has(std)) applyStandardText(block, standardCache.get(std));
+      else pending.push(std);
+    });
+    const wanted = [...new Set(pending)];
+    if (!wanted.length) return;
+
+    try {
+      const res = await fetch(`${API.base}/standards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ standards: wanted })
+      });
+      if (!res.ok) return;   // the citation keeps its blank line; nothing else changes
+      const body = await readJson(res);
+      Object.entries(body.definitions || {}).forEach(([std, text]) => {
+        if (text) standardCache.set(String(std).trim(), text);
+      });
+      citationsMissingText().forEach(block => {
+        const std = block.querySelector('[data-field="standardCited"]').value.trim();
+        if (standardCache.has(std)) applyStandardText(block, standardCache.get(std));
+      });
+    } catch (err) {
+      /* the standard number still shows; the description simply stays empty */
+    }
+  }
+
   // ---- AI summary, written into Underwriter Notes ----
   // The summary lives in the notes box rather than a panel of its own, so the
   // underwriter's own words and the generated ones travel together. It is
@@ -1373,6 +1476,7 @@
       inspectionsTableWrap.style.display = 'none';
     }
     recalcAgg();
+    fillMissingStandards();
   }
 
   async function loadFromApi() {
