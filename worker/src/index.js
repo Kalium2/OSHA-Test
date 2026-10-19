@@ -205,6 +205,13 @@ const EVN_FACTOR = {
 };
 
 // ---------- DOL API ----------
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/**
+ * DOL returns an intermittent 502 under load: the same query can fail and then
+ * succeed seconds later. Retry a few times before giving up, so a transient
+ * fault at their end does not surface as a failed search.
+ */
 async function dol(env, table, filterObject, { limit = 200, offset = 0, cacheTtl = 900 } = {}) {
   const url = new URL(`${BASE}/${table}/json`);
   url.searchParams.set('limit', String(limit));
@@ -213,19 +220,41 @@ async function dol(env, table, filterObject, { limit = 200, offset = 0, cacheTtl
   // DOL's /v4/get endpoints take the key as a query parameter, not a header.
   url.searchParams.set('X-API-KEY', env.DOL_API_KEY);
 
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'violations-desk/1.0' },
-    cf: { cacheTtl, cacheEverything: true }   // DOL data changes daily at most
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw Object.assign(new Error(`DOL ${table} returned ${res.status}`), {
-      status: res.status === 401 ? 500 : 502,   // a bad key is our problem, not the caller's
-      detail: body.slice(0, 300)
-    });
+  const RETRY_STATUS = [429, 500, 502, 503, 504];
+  const DELAYS = [250, 750, 1500];
+  let last = null;
+
+  for (let attempt = 0; attempt <= DELAYS.length; attempt += 1) {
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: { 'User-Agent': 'violations-desk/1.0' },
+        cf: { cacheTtl, cacheEverything: true }   // DOL data changes daily at most
+      });
+    } catch (err) {
+      last = { status: 0, body: String(err).slice(0, 200) };
+      if (attempt < DELAYS.length) { await sleep(DELAYS[attempt]); continue; }
+      break;
+    }
+
+    if (res.ok) {
+      const body = await res.json();
+      return body.data ?? body;
+    }
+
+    last = { status: res.status, body: (await res.text()).slice(0, 300) };
+    if (RETRY_STATUS.includes(res.status) && attempt < DELAYS.length) {
+      await sleep(DELAYS[attempt]);
+      continue;
+    }
+    break;
   }
-  const body = await res.json();
-  return body.data ?? body;
+
+  throw Object.assign(new Error(`DOL ${table} returned ${last.status}`), {
+    status: last.status === 401 ? 500 : 502,   // a bad key is our problem, not the caller's
+    detail: last.body,
+    retried: true
+  });
 }
 
 const eq = (field, value) => ({ and: [{ field, operator: 'eq', value }] });
@@ -1120,10 +1149,10 @@ export default {
 
       return json({ error: 'Not found. Try /search, /inspection or /health' }, request, env, 404);
     } catch (err) {
-      return json(
-        { error: err.message, detail: err.detail },
-        request, env, err.status || 500
-      );
+      const message = err.retried && err.status === 502
+        ? 'The Department of Labor service is not responding right now. Try again in a moment.'
+        : err.message;
+      return json({ error: message, detail: err.detail }, request, env, err.status || 500);
     }
   }
 };
