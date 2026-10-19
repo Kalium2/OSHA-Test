@@ -1259,13 +1259,16 @@
     const blocks = citationsMissingText();
     if (!blocks.length) return;
 
-    const pending = [];
+    const pending = new Map();
     blocks.forEach(block => {
       const std = block.querySelector('[data-field="standardCited"]').value.trim();
-      if (standardCache.has(std)) applyStandardText(block, standardCache.get(std));
-      else pending.push(std);
+      if (standardCache.has(std)) { applyStandardText(block, standardCache.get(std)); return; }
+      // a state plan code means nothing without the state it belongs to
+      const row = block.closest('tr')?.previousElementSibling;
+      const state = row?.querySelector('.f-state')?.value?.trim() || '';
+      if (!pending.has(std)) pending.set(std, { standard: std, state });
     });
-    const wanted = [...new Set(pending)];
+    const wanted = [...pending.values()];
     if (!wanted.length) return;
 
     try {
