@@ -872,6 +872,67 @@ async function summarise(request, env) {
   }
 }
 
+/**
+ * Plain-language summaries of cited standards, for the citations where OSHA
+ * publishes no general duty text. Asked for in one batch per search and
+ * cached at the edge, since a standard's meaning does not change.
+ */
+const STANDARD_SYSTEM = [
+  'You explain OSHA standards to a commercial insurance underwriter.',
+  'For each standard given, provide a concise and direct summary of what the standard requires.',
+  'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
+  'Do not restate the standard number. Do not speculate: if a standard is not recognised, return an empty string for it.',
+  'Return JSON only: {"definitions":{"<standard as given>":"<summary>"}}'
+].join(' ');
+
+async function describeStandards(request, env) {
+  if (!env.ANTHROPIC_API_KEY) {
+    return json({ error: 'Standard summaries are not configured on this service (no model credential).' }, request, env, 501);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Expected a JSON body of standards' }, request, env, 400);
+  }
+  const standards = [...new Set((body?.standards || [])
+    .map(x => String(x || '').trim())
+    .filter(Boolean))].slice(0, 40);
+  if (!standards.length) return json({ definitions: {} }, request, env);
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: env.SUMMARY_MODEL || 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: STANDARD_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: 'Provide a concise and direct summary of each of these OSHA standards:\n' + standards.join('\n')
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 300);
+    return json({ error: `The model service returned ${res.status}`, detail }, request, env, 502);
+  }
+
+  const data = await res.json();
+  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+  try {
+    const parsed = JSON.parse(text.replace(/^```(?:json)?|```$/g, '').trim());
+    return json({ definitions: parsed.definitions || {} }, request, env);
+  } catch {
+    return json({ definitions: {}, detail: 'Model response was not valid JSON' }, request, env, 502);
+  }
+}
+
 function corsHeaders(request, env) {
   const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   const origin = request.headers.get('Origin') || '';
@@ -902,6 +963,9 @@ export default {
     }
     if (request.method === 'POST' && url.pathname === '/summary') {
       return summarise(request, env);
+    }
+    if (request.method === 'POST' && url.pathname === '/standards') {
+      return describeStandards(request, env);
     }
     if (request.method !== 'GET') return json({ error: 'GET only' }, request, env, 405);
     if (url.pathname === '/health') {
