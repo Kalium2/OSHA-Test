@@ -208,6 +208,54 @@ const EVN_FACTOR = {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /**
+ * NAICS industry titles. OSHA publishes the code only, so "238320" arrives with
+ * nothing to say it means Painting and Wall Covering Contractors.
+ *
+ * The 2022 Census NAICS structure is fetched once and cached for a week. Set
+ * NAICS_URL to serve the file from somewhere you control; it needs to be a CSV
+ * whose rows contain a code and a title, in that order.
+ */
+const NAICS_DEFAULT_URL = 'https://raw.githubusercontent.com/TAS-Technologies-Group/NAICS/main/naics_2022_code_file.csv';
+let naicsTitles = null;   // code -> title, for every level from 2 to 6 digits
+
+async function loadNaics(env) {
+  if (naicsTitles) return naicsTitles;
+  const map = new Map();
+  try {
+    const res = await fetch(env.NAICS_URL || NAICS_DEFAULT_URL, {
+      cf: { cacheTtl: 604800, cacheEverything: true }
+    });
+    if (res.ok) {
+      const text = await res.text();
+      text.split(/\r?\n/).forEach(line => {
+        // sequence,code,"title", ...  or  code,title
+        const m = line.match(/(?:^|,)(\d{2,6})\s*,\s*(?:"([^"]*)"|([^,]*))/);
+        if (!m) return;
+        const title = (m[2] ?? m[3] ?? '').trim();
+        if (title) map.set(m[1], title);
+      });
+    }
+  } catch (err) {
+    /* the code still displays on its own */
+  }
+  naicsTitles = map;
+  return naicsTitles;
+}
+
+// Exact match where the Census lists it, otherwise the nearest parent level,
+// so a code that has been retired still reads as something.
+function naicsLabel(code, titles) {
+  const digits = String(code ?? '').trim();
+  if (!digits || !titles || !titles.size) return digits;
+  if (/^0+$/.test(digits)) return digits;   // OSHA uses 000000 for "not recorded"
+  for (let len = digits.length; len >= 2; len -= 1) {
+    const title = titles.get(digits.slice(0, len));
+    if (title) return len === digits.length ? `${digits} — ${title}` : `${digits} — ${title} (group)`;
+  }
+  return digits;
+}
+
+/**
  * DOL returns an intermittent 502 under load: the same query can fail and then
  * succeed seconds later. Retry a few times before giving up, so a transient
  * fault at their end does not surface as a failed search.
@@ -566,7 +614,10 @@ async function loadInspections(env, inspections) {
   const absBySummary = by(abstracts, 'summary_nr');
 
   // Code tables, fetched once per request and only when there is an injury to decode.
-  const lookups = injuries.length ? await loadLookups(env) : null;
+  const [lookups, naics] = await Promise.all([
+    injuries.length ? loadLookups(env) : null,
+    loadNaics(env)
+  ]);
 
   return inspections.map(insp => {
     const id = String(insp.activity_nr);
@@ -580,6 +631,7 @@ async function loadInspections(env, inspections) {
       accident: summaryNr ? (aBySummary.get(String(summaryNr)) || [])[0] || null : null,
       abstractLines: summaryNr ? (absBySummary.get(String(summaryNr)) || []) : [],
       lookups,
+      naics,
       genDuty: gdByInsp.get(id) || [],
       emphasis: empByInsp.get(id) || []
     };
@@ -694,7 +746,7 @@ function abstractText(lines, accident) {
   return text || accident?.abstract_text || '';
 }
 
-export function mapRecord({ insp, violations, events, injuries, accident, abstractLines, genDuty, emphasis, lookups }) {
+export function mapRecord({ insp, violations, events, injuries, accident, abstractLines, genDuty, emphasis, lookups, naics }) {
   const live = (violations || []).filter(v => v.delete_flag !== 'D');
   const count = t => live.filter(v => v.viol_type === t).length;
   const sum = f => live.reduce((n, v) => n + (parseFloat(v[f]) || 0), 0);
@@ -717,7 +769,7 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
 
     siteAddress: addressBlock(insp.site_address, insp.site_city, insp.site_state, insp.site_zip),
     mailingAddress: addressBlock(insp.mail_street, insp.mail_city, insp.mail_state, insp.mail_zip),
-    naics: insp.naics_code,
+    naics: naicsLabel(insp.naics_code, naics),
     inspectionType: fromDict(INSP_TYPE, insp.insp_type) || insp.insp_type || '',
     scope: fromDict(INSP_SCOPE, insp.insp_scope) || insp.insp_scope || '',
     safetyHealth: fromDict(SAFETY_HLTH, insp.safety_hlth) || insp.safety_hlth || '',
