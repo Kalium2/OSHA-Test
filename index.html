@@ -101,7 +101,7 @@
   body.show-empty .is-empty { display: revert !important; }
   .load-status { font-size: 12px; color: var(--ink-soft); }
   .load-status.error { color: var(--danger); font-weight: 600; }
-  .osha-link { margin: 0 auto; color: var(--link); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+  .osha-link { color: var(--link); font-size: 12.5px; font-weight: 600; text-decoration: none; }
   .osha-link:hover { text-decoration: underline; }
 
   /* hover tooltip on the info badge */
@@ -271,6 +271,7 @@
   tr.citations-row > td { border-bottom: none; }
   tr.citation-def-row > td { padding-top: 0; padding-bottom: 8px; }
   .cit-def { display: flex; align-items: flex-start; gap: 8px; }
+  .cit-def-label { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; padding-top: 4px; }
   .ai-tag { font-size: 9px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 2px 5px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.03em; white-space: nowrap; }
   .ai-tag[hidden] { display: none; }
   tr.citations-row.accident-related td { background: var(--danger-bg); }
@@ -396,45 +397,45 @@
     <button class="btn btn-ghost" id="generateSummary" type="button">Generate AI Summary</button>
     <span class="load-status" id="loadStatus" role="status"></span>
     <label class="empty-toggle"><input type="checkbox" id="showEmptyFields"> Show empty fields</label>
-    <a class="osha-link" href="https://www.osha.gov/ords/imis/establishment.html" target="_blank" rel="noopener noreferrer">OSHA Establishment Search ↗</a>
     <div class="tip-menu">
       <button class="tip-menu-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Field help">?</button>
       <div class="tip-menu-panel" role="menu">
         <p class="tip-menu-title">Field guide</p>
         <dl>
-          <dt>Abatement Complete / FTA Penalty</dt><dd>Whether the hazard was fixed and how it was resolved if not. FTA = Penalty for Failure to Abate.</dd>
-          <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address as filed, the industry code, and whether notice was given before the visit.</dd>
-          <dt>Construction fields</dt><dd>For construction incidents: the operation underway, the cause of injury, the cause of death on a fatality, how far the worker fell, and the project itself — type, cost band, construction activity and number of stories. The project detail gives a sense of the scale of work the employer takes on.</dd>
-          <dt>Current / Initial Penalty</dt><dd>The penalty as it stands and as first proposed. A large gap usually means a settlement.</dd>
-          <dt>AI Summary</dt><dd>Writes a summary of the inspections on screen into Underwriter Notes, under a header marking it as AI generated: under 50 words each, leading with what bears on risk. Running it again replaces that block and leaves anything you typed around it. Delete the rows that are not this account and regenerate to summarise only the remainder. Review it before relying on it.</dd>
-          <dt>Delete selected</dt><dd>Tick several inspections and remove them in one step, with one reason covering the lot. A generic name returns many unrelated establishments; the individual Delete still works row by row.</dd>
-          <dt>Reason for deletion</dt><dd>Pick one: Wrong insured, Duplicate entry, Data issue or Other. The last two also need a sentence saying what was wrong, so the record stays usable later.</dd>
-          <dt>Current / Initial Penalties (inspection)</dt><dd>That inspection's penalties, added up from its own citations: what it stands at now, and what was first proposed. A gap between them usually means a settlement. The Five Year History strip totals both across every inspection shown.</dd>
-          <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind it was, and the worker's job. Some arrive as OSHA numeric codes.</dd>
-          <dt>Deleted Inspections</dt><dd>Removed inspections, with the reason given. They can be restored.</dd>
-          <dt>Emphasis Programs</dt><dd>Specific hazards OSHA targets through planned inspections. A value means the inspection was not routine. Examples are silica, trenching, warehousing etc.</dd>
-          <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount at the site, private or government employer, whether migrant labor was involved, and whether the workforce was represented.</dd>
-          <dt>Fatality</dt><dd>Reads Yes where someone died: either the accident record carries a fatality, or an injury is recorded as one. The inspection type is not used, so an accident or Fat/Cat inspection where nobody died is not flagged. Citations arising from the accident sort to the top of the inspection and carry an ACCIDENT marker.</dd>
-          <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it: accident, complaint, referral or imminent danger.</dd>
-          <dt>Five Year History</dt><dd>Citation counts and penalty totals across all inspections shown. Deleted inspections are excluded.</dd>
-          <dt>Gravity</dt><dd>OSHA's severity score for a serious violation, 1 to 10. Higher means a more severe hazard.</dd>
-          <dt>Hazard Category / Hazardous Substances / Emphasis Program</dt><dd>The hazard involved, any substance codes recorded, and whether it fell under an emphasis program.</dd>
-          <dt>Initial vs Current Citation Type</dt><dd>What the citation was first issued as, and what it stands at now after any settlement or appeal.</dd>
-          <dt>Injury Detail</dt><dd>Part of body, source, event type, human and environmental factors, fall distances and any substance involved.</dd>
-          <dt>Inspection row</dt><dd>Activity number, dates, state, citation counts and establishment name. Click the arrow to open the full record; click a column heading to sort.</dd>
-          <dt>Inspection Type / Scope / Safety-Health</dt><dd>Why the inspection happened, how much of the site it covered, and whether it was a safety or health inspection.</dd>
-          <dt>Investigation Summary</dt><dd>Appears for accident inspections: the incident narrative, event date and time, and the injured worker's details.</dd>
-          <dt>Issuance / Abatement Due / Contest Date</dt><dd>When it was issued, when the hazard had to be fixed, and the date the employer contested it, if they did.</dd>
+          <dt>Abatement Complete / FTA Penalty</dt><dd>Whether the hazard was fixed. FTA = Penalty for Failure to Abate.</dd>
+          <dt>Addresses, NAICS, Advanced Notice</dt><dd>Site and mailing address, industry code, and whether OSHA gave notice first.</dd>
+          <dt>AI Summary</dt><dd>Writes a short summary of the inspections shown into Underwriter Notes. Review before use.</dd>
+          <dt>Construction fields</dt><dd>Construction incidents only: operation underway, cause, fall distance, and the project itself.</dd>
+          <dt>Current / Initial Penalties (inspection)</dt><dd>The inspection's own totals, summed from its citations. A gap suggests a settlement.</dd>
+          <dt>Current / Initial Penalty</dt><dd>What the citation stands at now, and what was first proposed.</dd>
+          <dt>Degree / Nature of Injury, Occupation</dt><dd>How severe the injury was, what kind, and the worker's job.</dd>
+          <dt>Delete selected</dt><dd>Remove several inspections at once with one shared reason.</dd>
+          <dt>Deleted Inspections</dt><dd>Removed inspections with their reason. They can be restored.</dd>
+          <dt>Emphasis Programs</dt><dd>Hazards OSHA targets through planned inspections. A value means the inspection was not routine.</dd>
+          <dt>Employees / Owner Type / Migrant Labor / Union Status</dt><dd>Headcount, private or government employer, migrant labour, and whether the workforce was represented.</dd>
+          <dt>Fatality</dt><dd>Reads Yes where someone died. Inspection type alone does not set it.</dd>
+          <dt>Final Order Date / Prompted By</dt><dd>When the citation became final, and what triggered it.</dd>
+          <dt>Five Year History</dt><dd>Citation counts and penalty totals across the inspections shown.</dd>
+          <dt>Gravity</dt><dd>OSHA's severity score for a serious violation, 1 to 10.</dd>
+          <dt>Hazard Category / Hazardous Substances / Emphasis Program</dt><dd>The hazard, any substance codes, and whether an emphasis programme applied.</dd>
+          <dt>Initial vs Current Citation Type</dt><dd>What it was issued as, and what it stands at after any settlement.</dd>
+          <dt>Injury Detail</dt><dd>Part of body, source, event type, contributing factors and fall distances.</dd>
+          <dt>Inspection row</dt><dd>Click the arrow to open the record; click a heading to sort.</dd>
+          <dt>Inspection Type / Scope / Safety-Health</dt><dd>Why OSHA came, how much they covered, and which kind of inspection.</dd>
+          <dt>Investigation Summary</dt><dd>Accident inspections only: the narrative and the injured worker's details.</dd>
+          <dt>Issuance / Abatement Due / Contest Date</dt><dd>When it was issued, when the fix was due, and whether it was contested.</dd>
           <dt>Keywords</dt><dd>OSHA's own keywords for the incident.</dd>
-          <dt>Latest Event</dt><dd>The most recent action on the citation, such as an informal or formal settlement.</dd>
-          <dt>Manual Search</dt><dd>Searches OSHA by establishment name across the last five calendar years. Partial names work.</dd>
+          <dt>Latest Event</dt><dd>The most recent action on the citation, such as a settlement.</dd>
+          <dt>Manual Search</dt><dd>Searches by establishment name across the last five calendar years.</dd>
           <dt>Open / closed counts</dt><dd>An inspection with no close date is still open.</dd>
-          <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and by industry.</dd>
-          <dt>Show empty fields</dt><dd>Fields OSHA returned blank are hidden. Tick this to see them all, for manual entry.</dd>
-          <dt>Standard Cited</dt><dd>The OSHA standard behind the citation; the line underneath carries its text. Where OSHA publishes none, a short AI summary of what the standard requires is filled in and marked AI.</dd>
-          <dt>Underwriter Notes</dt><dd>Record your notes on any Serious, Willful, Repeat, and FAT/CAT's. Detail information from agent's or loss control.</dd>
-          <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other. Current and initial penalties roll up into Five Year History.</dd>
-          <dt>Why No Inspection</dt><dd>Where OSHA opened a case but did not inspect, the reason: out of business, denied entry, too few employees, and so on.</dd>
+          <dt>OSHA Standard Summary</dt><dd>What the cited standard requires. Marked AI where OSHA publishes no text.</dd>
+          <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and industry.</dd>
+          <dt>Reason for deletion</dt><dd>Pick one. Data issue and Other also need a short explanation.</dd>
+          <dt>Show empty fields</dt><dd>Reveals fields OSHA returned blank, for manual entry.</dd>
+          <dt>Standard Cited</dt><dd>The OSHA standard behind the citation.</dd>
+          <dt>Underwriter Notes</dt><dd>Your notes on any Serious, Willful, Repeat or Fatality, and detail from the agent or loss control.</dd>
+          <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other.</dd>
+          <dt>Why No Inspection</dt><dd>Why a case was opened but not inspected: out of business, denied entry, and so on.</dd>
         </dl>
       </div>
     </div>
@@ -446,6 +447,7 @@
       <label for="estabName">Establishment name</label>
       <input id="estabName" type="text" placeholder="e.g. ACME MANUFACTURING" autocomplete="off" spellcheck="false">
       <button class="btn btn-primary" id="estabSearchBtn" type="button">Search</button>
+      <a class="osha-link" href="https://www.osha.gov/ords/imis/establishment.html" target="_blank" rel="noopener noreferrer">OSHA Establishment Search ↗</a>
     </div>
   </details>
 
@@ -672,6 +674,7 @@
       </table>
     </div>
     <div class="cit-def">
+      <span class="cit-def-label">OSHA Standard Summary</span>
       <span class="ai-tag" hidden>AI</span>
       <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
     </div>
