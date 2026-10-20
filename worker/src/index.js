@@ -227,12 +227,30 @@ async function loadNaics(env) {
     });
     if (res.ok) {
       const text = await res.text();
-      text.split(/\r?\n/).forEach(line => {
-        // sequence,code,"title", ...  or  code,title
-        const m = line.match(/(?:^|,)(\d{2,6})\s*,\s*(?:"([^"]*)"|([^,]*))/);
-        if (!m) return;
-        const title = (m[2] ?? m[3] ?? '').trim();
-        if (title) map.set(m[1], title);
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+
+      // The file may lead with a sequence column, so find the code and title by
+      // name where there is a header, and by shape where there is not.
+      const header = splitCsv(lines[0]).map(h => h.trim().toLowerCase());
+      let codeAt = header.indexOf('code');
+      let titleAt = header.findIndex(h => h === 'title' || h === 'name' || h === 'description');
+      const hasHeader = codeAt !== -1 && titleAt !== -1;
+
+      lines.slice(hasHeader ? 1 : 0).forEach(line => {
+        const fields = splitCsv(line);
+        let code, title;
+        if (hasHeader) {
+          code = (fields[codeAt] || '').trim();
+          title = (fields[titleAt] || '').trim();
+        } else {
+          // the code is a run of 2 to 6 digits whose next field is not numeric
+          const at = fields.findIndex((f, i) =>
+            /^\d{2,6}$/.test(f.trim()) && fields[i + 1] && !/^\d+$/.test(fields[i + 1].trim()));
+          if (at === -1) return;
+          code = fields[at].trim();
+          title = (fields[at + 1] || '').trim();
+        }
+        if (/^\d{2,6}$/.test(code) && title && !/^\d+$/.test(title)) map.set(code, title);
       });
     }
   } catch (err) {
@@ -240,6 +258,25 @@ async function loadNaics(env) {
   }
   naicsTitles = map;
   return naicsTitles;
+}
+
+// Minimal CSV field splitter: handles quoted fields containing commas.
+function splitCsv(line) {
+  const out = [];
+  let field = '';
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
+    if (quoted) {
+      if (c === '"' && line[i + 1] === '"') { field += '"'; i += 1; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { out.push(field); field = ''; }
+    else field += c;
+  }
+  out.push(field);
+  return out;
 }
 
 // Exact match where the Census lists it, otherwise the nearest parent level,
