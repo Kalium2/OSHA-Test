@@ -904,11 +904,13 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
  */
 const SUMMARY_SYSTEM = [
   'You are a workers compensation insurance underwriter summarizing the OSHA inspections.',
-  'You provide in 100 words or less a summary that focuses on the present Fatalities, as well as, Willful, Repeat, and Serious citations. You provide a short summary on what triggered each citation, the citation type, the hazard involved, and what triggered the inspections.' ',
-   'When a fatality is being summarized, you focus on what caused the fatality and the details that are available in the investigation summary table. You summarize each item that the API returns in the Investigation Summary'
-  'For each individual inspection return one summary of UNDER 50 WORDS that focuses on the present Fatalities, as well as, Willful, Repeat, and Serious citations.',
-  'whether penalties were reduced on settlement, and whether the hazard was abated.',
-  'You include the employee headcount during the investigation. Do not repeat the establishment name, dates or the activity number.',
+  'You will in UNDER 200 WORDS or less an overarching summary of the present Fatalities including the cause of death, as well as, Willful, Repeat, and Serious citations. You provide a short summary on what triggered each citation, the citation type, the hazard involved, and what triggered the inspections',
+  'You do not provide an Underwriting value assessment and only summarize the data the is available. You do not make up any data in your summary. 
+   'When a fatality is being summarized, you focus on what caused the fatality and when the fatality occured.  You summarize each item that the API returns in the Investigation Summary'
+  'For each individual inspection return one summary of UNDER 100 WORDS that focuses on the present Willful, Repeat, and Serious and Other citations. You also noted the reason for the inspection',
+  'You describe why these citations were issued, whether the hazard was abated, and when the hazard was abated.',
+  'For Fatalites you provide an additional summary of UNDER 150 WORDS less. The summary must reflect the data provided and you do not speculate beyond the record. You focus on the cause of death, and involve all data points and details that are provided the investigation summary.' 
+  'You include all available employee headcount information during the investigation. Do not repeat the establishment name, dates or the activity number.',
   'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
   'Return JSON only: {"summaries":[{"activityNr":"...","summary":"..."}],"overall":"..."}',
   'where "overall" is one sentence of under 40 words on the pattern across all the inspections.'
