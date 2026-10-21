@@ -1058,7 +1058,6 @@ function normaliseStandard(raw) {
 }
 
 const STANDARD_SYSTEM = [
-const STANDARD_SYSTEM = [
   'You define occupational safety and health standards for a commercial insurance underwriter.',
   'For each standard provided, identify and summarize exactly what the cited regulation governs.',
   'Each input line contains an OSHA stored code and the citation it refers to. Generate the definition for the citation, not the stored code.',
