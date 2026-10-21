@@ -904,10 +904,9 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
  */
 const SUMMARY_SYSTEM = [
   'You are a workers compensation insurance underwriter summarizing the OSHA inspections.',
-  'You provide in 100 words or less a of the aggregate information',
-  'You focus on Fatalities, Willful, Repeat, and Serious citation. You provide a short summary on what triggered the citation, the citation type, and the hazard involved,',
-  'When a fatality is being summarized, you focused on the what caused the fatality and the details that are available in the investigation summary table.'
-  'For each inspection return one summary of UNDER 50 WORDS.',
+  'You provide in 100 words or less a summary that focuses on the present Fatalities, as well as, Willful, Repeat, and Serious citations. You provide a short summary on what triggered each citation, the citation type, the hazard involved, and what triggered the inspections.' ',
+   'When a fatality is being summarized, you focus on what caused the fatality and the details that are available in the investigation summary table. You summarize each item that the API returns in the Investigation Summary'
+  'For each individual inspection return one summary of UNDER 50 WORDS that focuses on the present Fatalities, as well as, Willful, Repeat, and Serious citations.',
   'whether penalties were reduced on settlement, and whether the hazard was abated.',
   'You include the employee headcount during the investigation. Do not repeat the establishment name, dates or the activity number.',
   'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
