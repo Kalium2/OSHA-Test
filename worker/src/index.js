@@ -909,7 +909,7 @@ const SUMMARY_SYSTEM = [
   'Write plainly, in full sentences. Refer to the employer as "the insured". Do not repeat the establishment name, the dates or the activity number.',
   'Return JSON only: {"summaries":[{"activityNr":"...","summary":"..."}],"overall":"..."}',
 
-  '"overall" is the overarching summary of all the inspections together, under 200 words.',
+  '"overall" is the overarching summary of all the inspections together, in 100 words or less.',
   'Open it with how many inspections there were across the five year period.',
   'Then cover any fatalities, including what caused each death and when it happened.',
   'Then the Willful, Repeat and Serious citations: the standard cited, what that standard requires, the hazard involved, and what triggered the inspection.',
