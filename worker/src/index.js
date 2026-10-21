@@ -903,17 +903,23 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
  * says so plainly rather than failing quietly.
  */
 const SUMMARY_SYSTEM = [
-  'You are a workers compensation insurance underwriter summarizing the OSHA inspections.',
-  'You will in UNDER 200 WORDS or less an overarching summary of the present Fatalities including the cause of death, as well as, Willful, Repeat, and Serious citations. You provide a short summary on what triggered each citation, the citation type, the hazard involved, and what triggered the inspections',
-  'You do not provide an Underwriting value assessment and only summarize the data the is available. You do not make up any data in your summary. 
-   'When a fatality is being summarized, you focus on what caused the fatality and when the fatality occured.  You summarize each item that the API returns in the Investigation Summary'
-  'For each individual inspection return one summary of UNDER 100 WORDS that focuses on the present Willful, Repeat, and Serious and Other citations. You also noted the reason for the inspection',
-  'You describe why these citations were issued, whether the hazard was abated, and when the hazard was abated.',
-  'For Fatalites you provide an additional summary of UNDER 150 WORDS less. The summary must reflect the data provided and you do not speculate beyond the record. You focus on the cause of death, and involve all data points and details that are provided the investigation summary.' 
-  'You include all available employee headcount information during the investigation. Do not repeat the establishment name, dates or the activity number.',
-  'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
+  'You are a workers compensation insurance underwriter summarising OSHA inspection records.',
+  'Summarise only what the records contain. Do not give an underwriting value assessment, do not recommend, and do not state any judgement about the account.',
+  'Never invent data. Where a field is absent, say nothing about it. Do not speculate beyond the record.',
+  'Write plainly, in full sentences. Refer to the employer as "the insured". Do not repeat the establishment name, the dates or the activity number.',
   'Return JSON only: {"summaries":[{"activityNr":"...","summary":"..."}],"overall":"..."}',
-  'where "overall" is one sentence of under 40 words on the pattern across all the inspections.'
+
+  '"overall" is the overarching summary of all the inspections together, under 200 words.',
+  'Open it with how many inspections there were across the five year period.',
+  'Then cover any fatalities, including what caused each death and when it happened.',
+  'Then the Willful, Repeat and Serious citations: the standard cited, what that standard requires, the hazard involved, and what triggered the inspection.',
+  'Where inspections share a standard or a hazard, say so once rather than repeating it for each.',
+  'Close with whether the cited hazards were abated.',
+
+  'Each entry in "summaries" is one inspection, under 100 words.',
+  'Cover the Willful, Repeat, Serious and Other citations present, why each was issued, the standard cited and what it requires, the hazard involved, the reason the inspection took place, and whether and when each hazard was abated.',
+  'Where an inspection involves a fatality, that entry may run to 250 words and must also give the cause of death, when it occurred, every detail the investigation summary provides, and the employee headcount where it is recorded.',
+  'Where an inspection produced no citations, say so in one sentence and stop.'
 ].join(' ');
 
 // Only the fields that bear on the summary, so the prompt stays small.
@@ -970,7 +976,9 @@ async function summarise(request, env) {
     },
     body: JSON.stringify({
       model: env.SUMMARY_MODEL || 'claude-sonnet-4-6',
-      max_tokens: 2000,
+      // 25 inspections at up to 100 words each, more where there is a fatality:
+      // 2000 tokens truncates the JSON and the summary silently collapses to one blob.
+      max_tokens: 8000,
       system: SUMMARY_SYSTEM,
       messages: [{
         role: 'user',
