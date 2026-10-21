@@ -272,8 +272,9 @@
   tr.citation-def-row > td { padding-top: 0; padding-bottom: 8px; }
   .cit-def { display: flex; align-items: flex-start; gap: 8px; }
   .cit-def-label { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; padding-top: 4px; }
-  .ai-tag { font-size: 9px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 2px 5px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.03em; white-space: nowrap; }
-  .ai-tag[hidden] { display: none; }
+  .src-tag { font-size: 9px; font-weight: 700; color: var(--ink-soft); background: var(--select-bg); border: 1px solid var(--line-strong); padding: 1px 5px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.03em; white-space: nowrap; }
+  .src-tag.is-ai { color: var(--badge-ink); background: var(--badge-bg); border-color: var(--badge-bg); }
+  .src-tag[hidden] { display: none; }
   tr.citations-row.accident-related td { background: var(--danger-bg); }
   tr.citations-row .row-num { white-space: nowrap; }
   .cit-flag { display: block; width: fit-content; font-size: 9px; font-weight: 700; color: var(--badge-ink); background: var(--badge-bg); padding: 1px 4px; border-radius: 3px; margin-top: 3px; letter-spacing: 0.02em; white-space: nowrap; }
@@ -428,11 +429,11 @@
           <dt>Latest Event</dt><dd>The most recent action on the citation, such as a settlement.</dd>
           <dt>Manual Search</dt><dd>Searches by establishment name across the last five calendar years.</dd>
           <dt>Open / closed counts</dt><dd>An inspection with no close date is still open.</dd>
-          <dt>OSHA Standard Summary</dt><dd>What the cited standard requires. Marked AI where OSHA publishes no text.</dd>
           <dt>Planning Guides</dt><dd>Which OSHA planning guides applied, by safety or health and industry.</dd>
           <dt>Reason for deletion</dt><dd>Pick one. Data issue and Other also need a short explanation.</dd>
           <dt>Show empty fields</dt><dd>Reveals fields OSHA returned blank, for manual entry.</dd>
           <dt>Standard Cited</dt><dd>The OSHA standard behind the citation.</dd>
+          <dt>OSHA Standard Summary</dt><dd>The regulation's own text where it can be had, tagged with its source. AI means no official text answered.</dd>
           <dt>Underwriter Notes</dt><dd>Your notes on any Serious, Willful, Repeat or Fatality, and detail from the agent or loss control.</dd>
           <dt>Violation Items</dt><dd>One block per citation, ranked Willful, Repeat, Serious, Other.</dd>
           <dt>Why No Inspection</dt><dd>Why a case was opened but not inspected: out of business, denied entry, and so on.</dd>
@@ -675,7 +676,7 @@
     </div>
     <div class="cit-def">
       <span class="cit-def-label">OSHA Standard Summary</span>
-      <span class="ai-tag" hidden>AI</span>
+      <span class="src-tag" hidden></span>
       <textarea class="f-input f-stdDefinition" rows="1" placeholder="Cited standard details go here"></textarea>
     </div>
     <div class="cit-extra">
@@ -1250,11 +1251,19 @@
     });
   }
 
-  function applyStandardText(block, text) {
+  // A definition carries where it came from: the regulator's own text, or a
+  // model summary where no official source answered.
+  function applyStandardText(block, entry) {
     const def = block.querySelector('.f-stdDefinition');
-    const tag = block.querySelector('.ai-tag');
+    const tag = block.querySelector('.src-tag');
+    const text = typeof entry === 'string' ? entry : entry?.text || '';
+    const source = typeof entry === 'string' ? 'ai' : entry?.source || '';
     def.value = text;
-    if (tag) tag.hidden = false;
+    if (tag) {
+      tag.hidden = !text;
+      tag.textContent = source === 'ai' ? 'AI' : source;
+      tag.classList.toggle('is-ai', source === 'ai');
+    }
     autosize(def);
   }
 
@@ -1282,8 +1291,9 @@
       });
       if (!res.ok) return;   // the citation keeps its blank line; nothing else changes
       const body = await readJson(res);
-      Object.entries(body.definitions || {}).forEach(([std, text]) => {
-        if (text) standardCache.set(String(std).trim(), text);
+      Object.entries(body.definitions || {}).forEach(([std, entry]) => {
+        const text = typeof entry === 'string' ? entry : entry?.text;
+        if (text) standardCache.set(String(std).trim(), entry);
       });
       citationsMissingText().forEach(block => {
         const std = block.querySelector('[data-field="standardCited"]').value.trim();
