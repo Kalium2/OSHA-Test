@@ -1085,6 +1085,10 @@ function parseStateSection(raw) {
   // Accept citations such as 4999, 4999(a), packed 4999 A, or 4999 A01.
   // The end anchor is important: never silently ignore an unparsed suffix.
   const m = value.match(/^(\d+(?:\.\d+)?)(?:\s*\(([a-z])\)(?:\((\d+)\))?|\s+([A-Z])(\d*))?$/i);
+  const retrieved = await Promise.all(standards.map(async standard => ({
+  ...standard,
+  source: await retrieveStandardText(standard)
+})));
   if (!m) return null;
   const section = m[1];
   let subsection = '';
@@ -1220,6 +1224,18 @@ async function describeStandards(request, env) {
     ...standard,
     source: await retrieveStandardText(standard)
   })));
+  if (body.debug === true) {
+  return json({
+    debug: retrieved.map(item => ({
+      standard: item.code,
+      state: item.state,
+      verified: Boolean(item.source),
+      citation: item.source?.citation || null,
+      sourceUrl: item.source?.sourceUrl || null,
+      textPreview: item.source?.text?.slice(0, 500) || null
+    }))
+  }, request, env);
+}
   const definitions = {};
   for (const item of retrieved) {
     if (!item.source) definitions[item.code] = UNVERIFIED_STANDARD;
