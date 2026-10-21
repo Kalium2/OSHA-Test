@@ -1229,10 +1229,37 @@ async function fetchText(url) {
  * becomes an underscore — a dotted section fetched with the dot 404s, which is
  * one reason dotted citations used to come back empty.
  */
+/**
+ * The section number a code refers to, in the form California publishes it.
+ *
+ * OSHA stores a section in two different ways and both arrive here:
+ *   "3314(C)(1)" / "1532.1(L)(2)"   already published form
+ *   "23400012 A"                    packed: 4 digits of section group,
+ *                                   4 of section number -> 2340.12
+ * The packed form is not only federal. Reading "23400012" as "23400" asks for a
+ * section that does not exist, which is how 2340.12(a) came back empty.
+ */
+function californiaSection(code) {
+  // Some records carry the regulation's name on the front: T8-3203(A), 8 CCR 3314.
+  const cleaned = String(code || '').trim().toUpperCase()
+    .replace(/^(T\s*-?\s*8|8\s*CCR|CCR\s*T?\s*-?\s*8?|CAL\s*\/?\s*OSHA)[\s.:-]*/, '');
+  const first = cleaned.split(/\s+/)[0].replace(/^[^\d]*/, '');
+  if (!first) return null;
+
+  const packed = first.match(/^(\d{4})(\d{4})$/);
+  if (packed) {
+    const tail = packed[2].replace(/^0+/, '');
+    return tail ? `${packed[1]}.${tail}` : packed[1];
+  }
+
+  const plain = first.match(/^(\d{2,5}(?:\.\d+)?)/);
+  return plain ? plain[1] : null;
+}
+
+// 2340.12 -> /title8/2340_12.html. The decimal is an underscore in the filename.
 function californiaUrl(code) {
-  const section = String(code || '').trim().match(/(\d{2,5}(?:\.\d+)?)/);
-  if (!section) return null;
-  return `https://www.dir.ca.gov/title8/${section[1].replace('.', '_')}.html`;
+  const section = californiaSection(code);
+  return section ? `https://www.dir.ca.gov/title8/${section.replace('.', '_')}.html` : null;
 }
 
 async function californiaText(code) {
@@ -1377,16 +1404,32 @@ async function standardDiagnostic(request, env, q) {
   const state = (q.get('state') || '').trim().toUpperCase();
   const result = code ? await officialText(env, { code, state }).catch(() => null) : null;
 
+  const federal = Boolean(federalParts(code)) || isGeneralDuty(code);
+  const page = !federal && state === 'CA' ? californiaUrl(code) : null;
+
+  // Why a blank description is blank: the code could not be read, the page is
+  // not there, or the page is there and the subsection could not be found in it.
+  let reason;
+  if (result) reason = undefined;
+  else if (!code) reason = 'no standard given';
+  else if (federal) reason = 'the eCFR returned nothing for this section';
+  else if (!state) reason = 'the inspection carries no state, so a state plan code cannot be looked up';
+  else if (state !== 'CA') reason = `${STATE_PLAN_TITLES[state] || state + ' state plan'} is not retrieved; only California is fetched today`;
+  else if (!page) reason = 'no section number could be read out of the code';
+  else reason = (await fetchText(page)) ? 'the page was found but held no usable text' : 'no page at that address';
+
   return json({
     code,
     state,
     citation: normaliseStandard(code) || code,
-    federal: Boolean(federalParts(code)) || isGeneralDuty(code),
-    source: state === 'CA' ? californiaUrl(code) : null,
-    statePlan: state && state !== 'CA' ? (STATE_PLAN_TITLES[state] || `${state} state plan`) + ' — not fetched; only California is published section by section today' : undefined,
+    federal,
+    section: californiaSection(code),
+    page,
     subsection: subPath(code),
     found: Boolean(result),
-    ...(result || {})
+    reason,
+    text: result?.text,
+    textSource: result?.source
   }, request, env);
 }
 
