@@ -904,7 +904,7 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
 const SUMMARY_SYSTEM = [
   'You summarise OSHA inspection records for a commercial insurance underwriter.',
   'For each inspection return one summary of UNDER 50 WORDS covering only what bears on risk:',
-  'the worst citation types from a workers compensation perspective, whether anyone died or was seriously hurt, the hazard involved,',
+  'Summarize the exact standard definition for Serious, Willful, and Repeat violations from a workers compensation perspective, whether anyone died or was seriously hurt, the hazard involved,',
   'whether penalties were reduced on settlement, and whether the hazard was abated.',
   'Lead with the most serious fact. Do not repeat the establishment name, dates or the activity number.',
   'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
