@@ -7,6 +7,7 @@
  *   GET /search?name=ACME&state=CA&since=2021-01-01   -> [{ activityNr, openDate, state, establishment }]
  *   GET /inspection?activity=1844208015               -> one mapped record
  *   GET /inspection?name=ACME&state=CA&since=...      -> mapped records for every match (max `limit`, default 10)
+ *   GET /standard?code=3314(C)(1)&state=CA            -> the regulation's own text, with its working
  *   GET /health                                       -> { ok: true }
  *
  * Add `&raw=1` to any inspection call to get the unmapped DOL rows instead.
@@ -991,17 +992,24 @@ async function summarise(request, env) {
 }
 
 /**
- * Plain-language summaries of cited standards, for the citations where OSHA
- * publishes no general duty text. Asked for in one batch per search and
- * cached at the edge, since a standard's meaning does not change.
+ * The published text of a cited standard, taken from the regulator itself.
+ *
+ * Cal/OSHA publishes every Title 8 section as its own page on dir.ca.gov, and
+ * federal standards come from the eCFR versioner API. Both are public, keyless
+ * and authoritative. A citation therefore shows the regulation's own wording or
+ * it shows nothing: no model is asked to describe a standard. The AI summary of
+ * the inspections themselves (POST /summary) is unaffected.
  */
+
 /**
  * OSHA stores a cited standard in its own packed form: "19100037 B06" is
- * 29 CFR 1910.37(b)(6), and "5A0001" is section 5(a)(1) of the Act. The model
- * knows the published citation, not the packed one, so translate before asking.
+ * 29 CFR 1910.37(b)(6), and "5A0001" is section 5(a)(1) of the Act. State plan
+ * codes arrive closer to how they are published: "3314(C)(1)", "1532.1(L)(2)".
  */
-// State plans publish their own codes. Naming the regulation makes a bare
-// section number identifiable; without it, "3314(G)" could be anyone's.
+
+// State plans publish their own codes. Only California is fetched today; the
+// rest of this list names the regulation for the /standard diagnostic, so an
+// unresolved code is at least identifiable.
 const STATE_PLAN_TITLES = {
   CA: 'California Code of Regulations, Title 8',
   MI: 'Michigan Occupational Safety and Health Standards',
@@ -1057,15 +1065,191 @@ function normaliseStandard(raw) {
   return packed ? '29 CFR ' + head + suffix : head + suffix;
 }
 
+// ---------- reading a regulation page ----------
+
 /**
- * The published text of a cited standard, from the regulator rather than from a
- * model. Federal standards come from the eCFR versioner API, which is public,
- * keyless and authoritative. California Title 8 comes from the state's own
- * publication of the regulation.
- *
- * A model summary is a last resort, used only where no official source answers,
- * and is marked as such so the reader can tell the difference.
+ * Markup to plain text, one paragraph per line. The line breaks are the point:
+ * a subsection is found by the line that opens it, which is far more reliable
+ * than hunting for "(c)" inside a wall of text that also says "(c)" in the
+ * middle of a cross reference.
  */
+function toPlainText(markup) {
+  return String(markup || '')
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6]|head|hed|section|blockquote|table)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"').replace(/&apos;|&#39;/gi, "'")
+    // &sect; matters: it is how dir.ca.gov writes the section heading, and the
+    // heading is what tells the regulation apart from the page around it.
+    .replace(/&sect;/gi, '§').replace(/&para;/gi, '¶').replace(/&deg;/gi, '°')
+    .replace(/&mdash;/gi, '—').replace(/&ndash;/gi, '–').replace(/&middot;/gi, '·')
+    .replace(/&[lr]dquo;/gi, '"').replace(/&[lr]squo;/gi, "'")
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/[ \t\u00a0]+/g, ' ')
+    .split('\n').map(line => line.trim()).filter(Boolean)
+    .join('\n');
+}
+
+const clamp = (text, max = 900) =>
+  text.length > max ? text.slice(0, max).replace(/\s+\S*$/, '') + '…' : text;
+
+/**
+ * Both publishers wrap the regulation in material that is not the regulation:
+ * dir.ca.gov puts a disclaimer and breadcrumbs above it and the rulemaking
+ * history below, the eCFR appends its source note. The section itself runs from
+ * its own heading to the first of those endings.
+ */
+const SECTION_END = /^(HISTORY\b|NOTE\s*\d*:\s*Authority cited|Note\s*\d*:\s*Authority cited|\[\d+ FR \d)/;
+
+// The wrapper dir.ca.gov puts around every section, dropped when no heading is
+// found so the disclaimer is never mistaken for the regulation.
+const SECTION_CHROME = /(provided free of charge by the Department of Industrial Relations|full disclaimer|Return to index|New query|Go Back|Skip to Main Content)/i;
+
+function sectionBody(page) {
+  const lines = page.split('\n');
+  const head = lines.findIndex(line => /^§\s*\d/.test(line) || /^\d{2,5}(\.\d+)?\.\s+\S/.test(line));
+  const title = head === -1 ? '' : lines[head].replace(/\s+/g, ' ').trim();
+  const rest = (head === -1 ? lines.filter(line => !SECTION_CHROME.test(line)) : lines.slice(head + 1));
+  const stop = rest.findIndex(line => SECTION_END.test(line));
+  return { title, body: (stop === -1 ? rest : rest.slice(0, stop)).join('\n').trim() };
+}
+
+// ---------- finding the cited subsection ----------
+
+// The "(a)" / "(1)" / "(A)" a paragraph opens with, if it opens with one.
+const leadToken = line => (String(line).match(/^\(([A-Za-z0-9]{1,4})\)/) || [])[1] || null;
+
+const TOKEN_KIND = {
+  digit: t => /^\d{1,3}$/.test(t),
+  upper: t => /^[A-Z]{1,2}$/.test(t),
+  lower: t => /^[a-z]{1,2}$/.test(t),
+  // The CFR nests romans under digits, so i, v and x are not read as ordinary
+  // top-level letters: (a)(1)(i) must not look like a sibling of (a).
+  letter: t => /^[a-hj-uwyz]$/.test(t),
+  roman: t => /^[ivxl]{1,4}$/.test(t)
+};
+
+// How each publisher nests its subsections, outermost first.
+const NESTING = {
+  ca: ['lower', 'digit', 'upper'],         // 3314(c)(1)(A)
+  cfr: ['letter', 'digit', 'roman', 'upper']  // 1910.37(b)(6)(i)(A)
+};
+
+// OSHA stores the path upper case; each level has its own published casing.
+const asLevel = (token, kind) =>
+  kind === 'upper' ? String(token).toUpperCase() : String(token).toLowerCase();
+
+/**
+ * The paragraph a citation points at, e.g. (c)(1) within section 3314.
+ *
+ * Walks one level at a time: find the line that opens (c), keep it and
+ * everything nested under it, then look for (1) inside what is left. A level
+ * ends at the next paragraph opening at the same depth or shallower.
+ *
+ * Where the path cannot be followed — the page numbers its parts differently,
+ * or the citation is deeper than the page goes — this returns as much as it did
+ * follow, which is more use than returning nothing.
+ */
+function paragraphFor(text, path, scheme) {
+  const levels = NESTING[scheme] || NESTING.ca;
+  let lines = text.split('\n');
+
+  for (let depth = 0; depth < path.length; depth += 1) {
+    const kind = levels[Math.min(depth, levels.length - 1)];
+    const wanted = asLevel(path[depth], kind);
+    const start = lines.findIndex(line => leadToken(line) === wanted);
+    if (start === -1) break;
+
+    const ancestors = levels.slice(0, depth + 1);
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i += 1) {
+      const token = leadToken(lines[i]);
+      if (token && ancestors.some(k => TOKEN_KIND[k](token))) { end = i; break; }
+    }
+    lines = lines.slice(start, end);
+  }
+  return lines.join(' ').trim();
+}
+
+// "3314(C)(1)" -> ['C','1'] ; "19100037 B06" -> ['B','06'] ; "1532.1(L)(2)" -> ['L','2']
+function subPath(code) {
+  const tail = String(code || '').trim().replace(/^[^(\s]*/, '');
+  const path = [];
+
+  const parens = tail.match(/\(([A-Za-z0-9]{1,4})\)/g);
+  if (parens) {
+    parens.forEach(part => path.push(part.slice(1, -1)));
+  } else {
+    tail.trim().split(/\s+/).filter(Boolean).forEach(part => {
+      const m = part.match(/^([A-Za-z])(\d+)$/);
+      if (m) { path.push(m[1], m[2]); return; }
+      if (/^[A-Za-z]{1,4}$/.test(part) || /^\d{1,3}$/.test(part)) path.push(part);
+    });
+  }
+  return path.map(t => (/^\d+$/.test(t) ? String(Number(t)) : t));
+}
+
+// ---------- fetching ----------
+
+/**
+ * One regulation page is cited by several citations in the same search, and the
+ * platform caps how many outbound requests one invocation may make. Pages are
+ * held here for the life of the isolate on top of the edge cache, so twelve
+ * citations to section 3314 cost one fetch.
+ */
+const pageCache = new Map();
+
+async function fetchText(url) {
+  if (pageCache.has(url)) return pageCache.get(url);
+  let text = null;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'violations-desk/1.0', 'Accept': 'text/html,application/xml' },
+      cf: { cacheTtl: 604800, cacheEverything: true }   // a published regulation does not change
+    });
+    if (res.ok) text = await res.text();
+  } catch {
+    text = null;   // network fault: the citation keeps its number and no text
+  }
+  if (pageCache.size > 200) pageCache.clear();
+  pageCache.set(url, text);
+  return text;
+}
+
+// ---------- California: Title 8 on dir.ca.gov ----------
+
+/**
+ * Cal/OSHA publishes each section as its own page: section 3314 is at
+ * /title8/3314.html and section 1532.1 at /title8/1532_1.html. The decimal
+ * becomes an underscore — a dotted section fetched with the dot 404s, which is
+ * one reason dotted citations used to come back empty.
+ */
+function californiaUrl(code) {
+  const section = String(code || '').trim().match(/(\d{2,5}(?:\.\d+)?)/);
+  if (!section) return null;
+  return `https://www.dir.ca.gov/title8/${section[1].replace('.', '_')}.html`;
+}
+
+async function californiaText(code) {
+  const url = californiaUrl(code);
+  if (!url) return null;
+
+  const markup = await fetchText(url);
+  if (!markup) return null;
+
+  const { title, body } = sectionBody(toPlainText(markup));
+  if (!body || body.length < 40) return null;
+
+  const para = paragraphFor(body, subPath(code), 'ca') || body;
+  return clamp([title, para].filter(Boolean).join(' '));
+}
+
+// ---------- federal: 29 CFR from the eCFR ----------
 
 // "19100037 B06" -> { part: '1910', section: '1910.37', path: ['b','6'] }
 function federalParts(code) {
@@ -1084,16 +1268,8 @@ function federalParts(code) {
   return { part: packed[1], section: `${packed[1]}.${packed[2].replace(/^0+/, '') || '0'}`, path };
 }
 
-const stripTags = xml => xml
-  .replace(/<[^>]+>/g, ' ')
-  .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-  .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-  .replace(/&[a-z]+;/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
-
 let ecfrDate = null;
-async function latestCfrDate(env) {
+async function latestCfrDate() {
   if (ecfrDate) return ecfrDate;
   try {
     const res = await fetch('https://www.ecfr.gov/api/versioner/v1/titles.json', {
@@ -1109,95 +1285,57 @@ async function latestCfrDate(env) {
   return ecfrDate;
 }
 
-// The paragraph the citation points at, e.g. (b)(6) within 1910.37.
-function paragraphFor(text, path) {
-  if (!path.length) return text;
-  const wanted = path.map(p => `(${p})`).join('');
-  const direct = text.indexOf(wanted);
-  if (direct !== -1) return text.slice(direct).split(/\s(?=\([a-z0-9]{1,3}\)\s[A-Z])/)[0].trim();
-
-  // otherwise walk down one level at a time: (b) ... then (6) inside it
-  let scope = text;
-  for (const part of path) {
-    const at = scope.indexOf(`(${part})`);
-    if (at === -1) return null;
-    scope = scope.slice(at);
-    const next = scope.slice(1).search(new RegExp(`\\\\(${part === path.at(-1) ? '[a-z0-9]{1,3}' : '[a-z0-9]{1,3}'}\\\\)`));
-    if (part === path.at(-1)) break;
-    scope = scope.slice(1);
-  }
-  const end = scope.slice(1).search(/\s\([a-z0-9]{1,3}\)\s[A-Z]/);
-  return (end === -1 ? scope : scope.slice(0, end + 1)).trim();
-}
-
-async function federalText(env, code) {
+async function federalText(code) {
   const parts = federalParts(code);
   if (!parts) return null;
-  const date = await latestCfrDate(env);
+  const date = await latestCfrDate();
   const url = `https://www.ecfr.gov/api/versioner/v1/full/${date}/title-29.xml`
     + `?part=${parts.part}&section=${encodeURIComponent(parts.section)}`;
-  try {
-    const res = await fetch(url, { cf: { cacheTtl: 604800, cacheEverything: true } });
-    if (!res.ok) return null;
-    const text = stripTags(await res.text());
-    if (!text || text.length < 20) return null;
-    const para = paragraphFor(text, parts.path) || text;
-    return para.length > 600 ? para.slice(0, 600).replace(/\s+\S*$/, '') + '…' : para;
-  } catch {
-    return null;
-  }
+
+  const markup = await fetchText(url);
+  if (!markup) return null;
+
+  const { title, body } = sectionBody(toPlainText(markup));
+  if (!body || body.length < 20) return null;
+
+  const para = paragraphFor(body, parts.path, 'cfr') || body;
+  return clamp([title, para].filter(Boolean).join(' '));
 }
 
-// California publishes Title 8 section by section.
-async function californiaText(code) {
-  const section = String(code || '').trim().match(/^(\d{3,5})/);
-  if (!section) return null;
-  const sub = String(code).match(/\(([A-Za-z0-9]+)\)/);
-  try {
-    const res = await fetch(`https://www.dir.ca.gov/title8/${section[1]}.html`, {
-      cf: { cacheTtl: 604800, cacheEverything: true }
-    });
-    if (!res.ok) return null;
-    const text = stripTags(await res.text());
-    if (!text || text.length < 40) return null;
-    if (sub) {
-      const at = text.indexOf(`(${sub[1].toLowerCase()})`);
-      if (at !== -1) {
-        const scope = text.slice(at);
-        const end = scope.slice(1).search(/\s\([a-z0-9]{1,3}\)\s[A-Z]/);
-        const para = (end === -1 ? scope : scope.slice(0, end + 1)).trim();
-        if (para.length > 40) return para.length > 600 ? para.slice(0, 600).replace(/\s+\S*$/, '') + '…' : para;
-      }
-    }
-    return text.length > 600 ? text.slice(0, 600).replace(/\s+\S*$/, '') + '…' : text;
-  } catch {
-    return null;
-  }
-}
+// Section 5(a)(1) of the OSH Act is statute, not a regulation, so it is not on
+// either site. OSHA stores it as 5A0001.
+const GENERAL_DUTY = 'Section 5(a)(1) of the Occupational Safety and Health Act (general duty clause): '
+  + 'each employer shall furnish to each of his employees employment and a place of employment which are '
+  + 'free from recognized hazards that are causing or are likely to cause death or serious physical harm.';
 
+const isGeneralDuty = code => /^5A0*1$/.test(String(code || '').trim().toUpperCase().replace(/\s+/g, ''));
+
+/**
+ * One cited standard, from whichever regulator publishes it. The state decides
+ * where a non-federal code is looked up: a bare "3314" is a different rule in
+ * every state plan, so without a state nothing is fetched.
+ */
 async function officialText(env, { code, state }) {
-  const federal = await federalText(env, code);
+  if (!String(code || '').trim()) return null;
+  if (isGeneralDuty(code)) return { text: GENERAL_DUTY, source: 'OSH Act' };
+
+  const federal = await federalText(code);
   if (federal) return { text: federal, source: 'eCFR' };
-  if (state === 'CA') {
+
+  if (String(state || '').toUpperCase() === 'CA') {
     const ca = await californiaText(code);
     if (ca) return { text: ca, source: 'CA Title 8' };
   }
   return null;
 }
 
-const STANDARD_SYSTEM = [
-  'You explain OSHA standards to a commercial insurance underwriter.',
-  'For each standard given, provide a concise and direct summary of what the standard requires.',
-  'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
-  'Do not restate the standard number.',
-  'Each line gives OSHAs stored code, then the citation it refers to. Answer for that citation.',
-  'Many are state plan standards rather than federal 29 CFR: the line names the regulation, for example the California Code of Regulations, Title 8. Answer those the same way.',
-  'Give a summary for every standard listed. Where you are not certain of the exact wording, state the subject the section governs instead, phrased as a requirement.',
-  'Return an empty string only when you cannot identify the subject of the section at all. Do not fabricate specific numbers, limits or dates.',
-  'Key each result by the stored code exactly as given, not by the citation.',
-  'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
-].join(' ');
-
+/**
+ * POST /standards — the regulation's own text for each cited standard.
+ *
+ * Returns only what a regulator publishes. A standard that cannot be fetched is
+ * simply absent from `definitions`; the screen leaves that description blank and
+ * still shows the citation and its number.
+ */
 async function describeStandards(request, env) {
   let body;
   try {
@@ -1205,6 +1343,7 @@ async function describeStandards(request, env) {
   } catch {
     return json({ error: 'Expected a JSON body of standards' }, request, env, 400);
   }
+
   // Accepts plain codes, or { standard, state } where the state matters: a code
   // that is not a federal citation belongs to that state's own plan.
   const seen = new Set();
@@ -1218,61 +1357,37 @@ async function describeStandards(request, env) {
   standards.splice(40);
   if (!standards.length) return json({ definitions: {} }, request, env);
 
-  // The regulator's own text wherever it can be had.
   const definitions = {};
-  const official = await Promise.all(standards.map(std => officialText(env, std).catch(() => null)));
-  const unresolved = [];
+  const found = await Promise.all(standards.map(std => officialText(env, std).catch(() => null)));
   standards.forEach((std, i) => {
-    if (official[i]) definitions[std.code] = official[i];
-    else unresolved.push(std);
+    if (found[i]) definitions[std.code] = found[i];
   });
 
-  if (!unresolved.length) return json({ definitions }, request, env);
-  if (!env.ANTHROPIC_API_KEY) return json({ definitions }, request, env);
-
-  const asLine = ({ code, state }) => {
-    const published = normaliseStandard(code);
-    if (published && published !== code) return code + '  =  ' + published;
-    const title = STATE_PLAN_TITLES[state];
-    if (title) return code + '  =  ' + title + ', Section ' + code;
-    return code + '  =  ' + (state ? state + ' state plan standard ' + code : 'state plan standard ' + code);
-  };
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: env.SUMMARY_MODEL || 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      system: STANDARD_SYSTEM,
-      messages: [{
-        role: 'user',
-        content: 'Provide a concise and direct summary of each of these OSHA standards.\n'
-          + 'Each line is: <stored code>  =  <published citation>\n\n'
-          + unresolved.map(asLine).join('\n')
-      }]
-    })
-  });
-
-  if (!res.ok) {
-    return json({ definitions }, request, env);   // official text still stands
-  }
-
-  const data = await res.json();
-  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
-  try {
-    const parsed = JSON.parse(text.replace(/^```(?:json)?|```$/g, '').trim());
-    Object.entries(parsed.definitions || {}).forEach(([code, summary]) => {
-      if (summary) definitions[code] = { text: summary, source: 'ai' };
-    });
-  } catch {
-    /* whatever official text was found still returns */
-  }
   return json({ definitions }, request, env);
+}
+
+/**
+ * GET /standard?code=3314(C)(1)&state=CA — the same lookup for one standard,
+ * showing its working: the page asked for, the subsection path read out of the
+ * code, and whether anything came back. For checking a citation that arrives
+ * without a description.
+ */
+async function standardDiagnostic(request, env, q) {
+  const code = (q.get('code') || '').trim();
+  const state = (q.get('state') || '').trim().toUpperCase();
+  const result = code ? await officialText(env, { code, state }).catch(() => null) : null;
+
+  return json({
+    code,
+    state,
+    citation: normaliseStandard(code) || code,
+    federal: Boolean(federalParts(code)) || isGeneralDuty(code),
+    source: state === 'CA' ? californiaUrl(code) : null,
+    statePlan: state && state !== 'CA' ? (STATE_PLAN_TITLES[state] || `${state} state plan`) + ' — not fetched; only California is published section by section today' : undefined,
+    subsection: subPath(code),
+    found: Boolean(result),
+    ...(result || {})
+  }, request, env);
 }
 
 function corsHeaders(request, env) {
@@ -1319,6 +1434,10 @@ export default {
         hasKey: Boolean(env.DOL_API_KEY),
         keyLength: env.DOL_API_KEY ? String(env.DOL_API_KEY).length : 0
       }, request, env);
+    }
+    // Checking one standard needs no DOL key: it reads the regulator, not DOL.
+    if (url.pathname === '/standard') {
+      return standardDiagnostic(request, env, url.searchParams);
     }
     if (!env.DOL_API_KEY) return json({ error: 'DOL_API_KEY is not set on this Worker' }, request, env, 500);
 
