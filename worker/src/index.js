@@ -904,8 +904,7 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
 const SUMMARY_SYSTEM = [
   'You summarise OSHA inspection records for a commercial insurance underwriter.',
   'For each inspection return one summary of UNDER 50 WORDS covering only what bears on risk:',
-  'Provide the exact standard definition for Serious, Willful, and Repeat violations.'
-  'Provide a summary from a workers compensation perspective, whether anyone died or was seriously hurt, the hazard involved,',
+  'the worst citation types, whether anyone died or was seriously hurt, the hazard involved,',
   'whether penalties were reduced on settlement, and whether the hazard was abated.',
   'Lead with the most serious fact. Do not repeat the establishment name, dates or the activity number.',
   'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
@@ -1059,33 +1058,16 @@ function normaliseStandard(raw) {
 }
 
 const STANDARD_SYSTEM = [
-  'You define occupational safety and health standards for a commercial insurance underwriter.',
-  'For each standard provided, identify and summarize exactly what the cited regulation governs.',
-  'Each input line contains an OSHA stored code and the citation it refers to. Generate the definition for the citation, not the stored code.',
-  'Use the designated authoritative source for the jurisdiction and state plan associated with each citation.',
-  'Verify the exact regulation, section, subsection, and paragraph against the retrieved regulatory text before generating a definition.',
-  'State-plan regulations, including the California Code of Regulations, Title 8, must be evaluated using their own applicable regulatory text. Do not assume they match federal OSHA regulations.',
-  'Do not substitute a similar, related, or more familiar regulation when the exact citation cannot be verified.',
-  'Ensure the retrieved text corresponds to the exact citation provided, including any subsection or paragraph designation.',
-  'If the source returns a different section, an incomplete citation, conflicting text, or no verifiable regulatory text, return "Unable to verify the exact standard." Do not guess.',
-  'Use the regulatory text itself as the authority for the definition. Do not rely on search result snippets, page titles, model memory, or unrelated secondary summaries when the actual text is available.',
-  'If multiple sources disagree, prioritize the applicable official regulatory source for that jurisdiction. If the discrepancy cannot be resolved, return "Unable to verify the exact standard."',
-  'Summarize what the exact standard explicitly requires, permits, or prohibits.',
-  'State the requirement itself, not the consequences of violating it.',
-  'Preserve the specific activity, equipment, responsible party, and required action described in the regulation, where applicable.',
-  'Do not confuse a general topic or heading with the actual requirements in the cited subsection.',
-  'Do not introduce requirements, exceptions, thresholds, time periods, or conditions that are not supported by the verified regulatory text.',
-  'Do not restate the standard number in the definition.',
-  'Use concise, plain English suitable for a commercial insurance underwriter.',
-  'Paraphrase faithfully without changing the meaning or scope of the requirement.',
-  'Do not fabricate details or fill gaps using assumptions.',
-  'Do not determine accuracy from model confidence alone. Accuracy must be based on verified regulatory text matching the exact citation.',
-  'Process every supplied citation independently.',
-  'Key every result by the stored code exactly as provided, preserving its original characters and formatting. Never use the citation as the JSON key.',
-  'Return one definition per input line. Do not omit entries.',
-  'Return valid JSON only. Do not include Markdown fences, commentary, citations outside the JSON, or any other text.',
-  'Escape JSON strings correctly and ensure the output is syntactically valid JSON.',
-  'Return JSON in exactly this structure: {"definitions":{"<stored code as given>":"<concise definition>"}}'
+  'You explain OSHA standards to a commercial insurance underwriter.',
+  'For each standard given, provide a concise and direct summary of what the standard requires.',
+  'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
+  'Do not restate the standard number.',
+  'Each line gives OSHAs stored code, then the citation it refers to. Answer for that citation.',
+  'Many are state plan standards rather than federal 29 CFR: the line names the regulation, for example the California Code of Regulations, Title 8. Answer those the same way.',
+  'Give a summary for every standard listed. Where you are not certain of the exact wording, state the subject the section governs instead, phrased as a requirement.',
+  'Return an empty string only when you cannot identify the subject of the section at all. Do not fabricate specific numbers, limits or dates.',
+  'Key each result by the stored code exactly as given, not by the citation.',
+  'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
 ].join(' ');
 
 async function describeStandards(request, env) {
