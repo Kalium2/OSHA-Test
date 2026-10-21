@@ -1057,6 +1057,134 @@ function normaliseStandard(raw) {
   return packed ? '29 CFR ' + head + suffix : head + suffix;
 }
 
+/**
+ * The published text of a cited standard, from the regulator rather than from a
+ * model. Federal standards come from the eCFR versioner API, which is public,
+ * keyless and authoritative. California Title 8 comes from the state's own
+ * publication of the regulation.
+ *
+ * A model summary is a last resort, used only where no official source answers,
+ * and is marked as such so the reader can tell the difference.
+ */
+
+// "19100037 B06" -> { part: '1910', section: '1910.37', path: ['b','6'] }
+function federalParts(code) {
+  const value = String(code || '').trim().toUpperCase();
+  const [numeric, ...rest] = value.split(/\s+/);
+  const packed = numeric.match(/^(19\d{2})(\d+)$/);
+  if (!packed) return null;
+  const path = [];
+  rest.forEach(part => {
+    const m = part.match(/^([A-Z])(\d+)$/);
+    if (m) { path.push(m[1].toLowerCase(), String(Number(m[2]))); return; }
+    if (/^[IVX]+$/.test(part)) { path.push(part.toLowerCase()); return; }
+    if (/^[A-Z]$/.test(part)) { path.push(part.toLowerCase()); return; }
+    if (/^\d+$/.test(part)) path.push(String(Number(part)));
+  });
+  return { part: packed[1], section: `${packed[1]}.${packed[2].replace(/^0+/, '') || '0'}`, path };
+}
+
+const stripTags = xml => xml
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+  .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  .replace(/&[a-z]+;/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+let ecfrDate = null;
+async function latestCfrDate(env) {
+  if (ecfrDate) return ecfrDate;
+  try {
+    const res = await fetch('https://www.ecfr.gov/api/versioner/v1/titles.json', {
+      cf: { cacheTtl: 86400, cacheEverything: true }
+    });
+    if (res.ok) {
+      const body = await res.json();
+      const title29 = (body.titles || []).find(t => Number(t.number) === 29);
+      ecfrDate = title29?.latest_issue_date || null;
+    }
+  } catch { /* fall through to the date below */ }
+  if (!ecfrDate) ecfrDate = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  return ecfrDate;
+}
+
+// The paragraph the citation points at, e.g. (b)(6) within 1910.37.
+function paragraphFor(text, path) {
+  if (!path.length) return text;
+  const wanted = path.map(p => `(${p})`).join('');
+  const direct = text.indexOf(wanted);
+  if (direct !== -1) return text.slice(direct).split(/\s(?=\([a-z0-9]{1,3}\)\s[A-Z])/)[0].trim();
+
+  // otherwise walk down one level at a time: (b) ... then (6) inside it
+  let scope = text;
+  for (const part of path) {
+    const at = scope.indexOf(`(${part})`);
+    if (at === -1) return null;
+    scope = scope.slice(at);
+    const next = scope.slice(1).search(new RegExp(`\\\\(${part === path.at(-1) ? '[a-z0-9]{1,3}' : '[a-z0-9]{1,3}'}\\\\)`));
+    if (part === path.at(-1)) break;
+    scope = scope.slice(1);
+  }
+  const end = scope.slice(1).search(/\s\([a-z0-9]{1,3}\)\s[A-Z]/);
+  return (end === -1 ? scope : scope.slice(0, end + 1)).trim();
+}
+
+async function federalText(env, code) {
+  const parts = federalParts(code);
+  if (!parts) return null;
+  const date = await latestCfrDate(env);
+  const url = `https://www.ecfr.gov/api/versioner/v1/full/${date}/title-29.xml`
+    + `?part=${parts.part}&section=${encodeURIComponent(parts.section)}`;
+  try {
+    const res = await fetch(url, { cf: { cacheTtl: 604800, cacheEverything: true } });
+    if (!res.ok) return null;
+    const text = stripTags(await res.text());
+    if (!text || text.length < 20) return null;
+    const para = paragraphFor(text, parts.path) || text;
+    return para.length > 600 ? para.slice(0, 600).replace(/\s+\S*$/, '') + '…' : para;
+  } catch {
+    return null;
+  }
+}
+
+// California publishes Title 8 section by section.
+async function californiaText(code) {
+  const section = String(code || '').trim().match(/^(\d{3,5})/);
+  if (!section) return null;
+  const sub = String(code).match(/\(([A-Za-z0-9]+)\)/);
+  try {
+    const res = await fetch(`https://www.dir.ca.gov/title8/${section[1]}.html`, {
+      cf: { cacheTtl: 604800, cacheEverything: true }
+    });
+    if (!res.ok) return null;
+    const text = stripTags(await res.text());
+    if (!text || text.length < 40) return null;
+    if (sub) {
+      const at = text.indexOf(`(${sub[1].toLowerCase()})`);
+      if (at !== -1) {
+        const scope = text.slice(at);
+        const end = scope.slice(1).search(/\s\([a-z0-9]{1,3}\)\s[A-Z]/);
+        const para = (end === -1 ? scope : scope.slice(0, end + 1)).trim();
+        if (para.length > 40) return para.length > 600 ? para.slice(0, 600).replace(/\s+\S*$/, '') + '…' : para;
+      }
+    }
+    return text.length > 600 ? text.slice(0, 600).replace(/\s+\S*$/, '') + '…' : text;
+  } catch {
+    return null;
+  }
+}
+
+async function officialText(env, { code, state }) {
+  const federal = await federalText(env, code);
+  if (federal) return { text: federal, source: 'eCFR' };
+  if (state === 'CA') {
+    const ca = await californiaText(code);
+    if (ca) return { text: ca, source: 'CA Title 8' };
+  }
+  return null;
+}
+
 const STANDARD_SYSTEM = [
   'You explain OSHA standards to a commercial insurance underwriter.',
   'For each standard given, provide a concise and direct summary of what the standard requires.',
@@ -1071,9 +1199,6 @@ const STANDARD_SYSTEM = [
 ].join(' ');
 
 async function describeStandards(request, env) {
-  if (!env.ANTHROPIC_API_KEY) {
-    return json({ error: 'Standard summaries are not configured on this service (no model credential).' }, request, env, 501);
-  }
   let body;
   try {
     body = await request.json();
@@ -1092,6 +1217,18 @@ async function describeStandards(request, env) {
   });
   standards.splice(40);
   if (!standards.length) return json({ definitions: {} }, request, env);
+
+  // The regulator's own text wherever it can be had.
+  const definitions = {};
+  const official = await Promise.all(standards.map(std => officialText(env, std).catch(() => null)));
+  const unresolved = [];
+  standards.forEach((std, i) => {
+    if (official[i]) definitions[std.code] = official[i];
+    else unresolved.push(std);
+  });
+
+  if (!unresolved.length) return json({ definitions }, request, env);
+  if (!env.ANTHROPIC_API_KEY) return json({ definitions }, request, env);
 
   const asLine = ({ code, state }) => {
     const published = normaliseStandard(code);
@@ -1116,24 +1253,26 @@ async function describeStandards(request, env) {
         role: 'user',
         content: 'Provide a concise and direct summary of each of these OSHA standards.\n'
           + 'Each line is: <stored code>  =  <published citation>\n\n'
-          + standards.map(asLine).join('\n')
+          + unresolved.map(asLine).join('\n')
       }]
     })
   });
 
   if (!res.ok) {
-    const detail = (await res.text()).slice(0, 300);
-    return json({ error: `The model service returned ${res.status}`, detail }, request, env, 502);
+    return json({ definitions }, request, env);   // official text still stands
   }
 
   const data = await res.json();
   const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
   try {
     const parsed = JSON.parse(text.replace(/^```(?:json)?|```$/g, '').trim());
-    return json({ definitions: parsed.definitions || {} }, request, env);
+    Object.entries(parsed.definitions || {}).forEach(([code, summary]) => {
+      if (summary) definitions[code] = { text: summary, source: 'ai' };
+    });
   } catch {
-    return json({ definitions: {}, detail: 'Model response was not valid JSON' }, request, env, 502);
+    /* whatever official text was found still returns */
   }
+  return json({ definitions }, request, env);
 }
 
 function corsHeaders(request, env) {
