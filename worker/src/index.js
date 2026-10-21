@@ -907,47 +907,88 @@ const SUMMARY_SYSTEM = [
   'Summarise only what the records contain. Do not give an underwriting value assessment, do not recommend, and do not state any judgement about the account.',
   'Never invent data. Where a field is absent, say nothing about it. Do not speculate beyond the record.',
   'Write plainly, in full sentences. Refer to the employer as "the insured". Do not repeat the establishment name, the dates or the activity number.',
+  'Occupation, nature of injury, part of body, source of injury and event type are single coded values as OSHA records them. Give such a value as it is recorded rather than rewording it, so that one job title is not read as two.',
   'Return JSON only: {"summaries":[{"activityNr":"...","summary":"..."}],"overall":"..."}',
 
-  '"overall" is the overarching summary of all the inspections together, in 250 words or less.',
-  'Open with the number of inspections in five years. Then comment on any fatalities, including a maximum 15 word summary of what caused each death and when it happened. Do not comment on Fatalities if no fatality has been recorded.',
-  'Then comment on  Willful, Repeat and Serious citations: the standard cited, and the hazard involved. Note if a citation was initially Serious, Willful, or Repeat and now has a different Current Penalty',
-  'Close with whether the cited hazards have been abated and note any citation that has not been abated.',
+  '"overall" is the overarching summary of all the inspections together, in 100 words or less with a target of 50 words.',
+  'Open with any fatalities, including a maximum 5 word summary of what caused each death and when it happened.',
+  'Then comment on Willful, Repeat and Serious citations: the standard cited, and the hazard involved.',
+  'Close with whether the cited hazards were abated.',
   'If there are no Serious citations then state that there are none. Do not state if there are no Willful or Repeat citations.',
-  'Each entry in "summaries" is one inspection, with the inspection number bolded, and presented in under 100 words.',
+
+  'Each entry in "summaries" is one inspection, under 100 words.',
   'Cover the Willful, Repeat, Serious and Other citations present, why each was issued, the standard cited and what it requires, the hazard involved, the reason the inspection took place, and whether and when each hazard was abated.',
-  'Where an inspection involves a fatality, that entry may run to 250 words and must also give the cause of death, when it occurred, every detail the investigation summary provides,',
-  'Each entry in summaries will conclude with if abatement has occured, when the abatement occcured, and the employee headcount where it is recorded. If abatement has not been completed then note that it has not been abated',
-  'Where an inspection produced no citations, then do not create an entry and provide no comments.',
+  'Where an inspection involves a fatality, that entry may run to 250 words and must also give the cause of death, when it occurred, and every detail the investigation summary provides.',
+  'That includes the fall distance and the fall height in feet where either is recorded, the part of body, the source of injury, the event type, the task assigned, and the contributing human and environmental factors.',
+  'Each entry in summaries will conclude with the employee headcount where it is recorded.',
+  'Where an inspection produced no citations, then do not create an entry and provide no comments.'
 ].join(' ');
 
-// Only the fields that bear on the summary, so the prompt stays small.
+// Only the fields that bear on the summary, so the prompt stays small. A value
+// that is absent is left out entirely rather than sent as an empty string, so
+// the model is never shown a field it must then decide to ignore.
+const some = value => {
+  const text = String(value ?? '').trim();
+  return text || undefined;
+};
+
 function summaryInput(rec) {
+  const inv = rec.investigation;
   return {
     activityNr: rec.activityNr,
     opened: rec.dateOpened,
     status: rec.caseStatus,
     inspectionType: rec.inspectionType,
     fatality: rec.fatCat ? 'yes' : 'no',
+    employeesAtEstablishment: some(rec.employees),
     counts: rec.counts,
     penalties: rec.penalties,
-    emphasisPrograms: rec.emphasisPrograms || undefined,
+    emphasisPrograms: some(rec.emphasisPrograms),
     citations: (rec.violationItems || []).slice(0, 12).map(v => ({
       type: v.citationType,
       initialType: v.initialCitationType,
       standard: v.standardCited,
       currentPenalty: v.currentPenalty,
       initialPenalty: v.initialPenalty,
-      abatement: v.abateComplete || undefined,
-      promptedBy: v.prompted || undefined,
+      abatement: some(v.abateComplete),
+      abatementDueDate: some(v.abatementDueDate),
+      finalOrderDate: some(v.finalOrderDate),
+      promptedBy: some(v.prompted),
       accidentRelated: v.accidentRelated || undefined,
-      text: (v.standardDetails || '').slice(0, 300) || undefined
+      text: (v.standardDetails || '').slice(0, 500) || undefined
     })),
-    investigation: rec.investigation ? {
-      narrative: (rec.investigation.narrative || '').slice(0, 600),
-      injured: (rec.investigation.injured || []).slice(0, 3).map(i => ({
-        age: i.age, sex: i.sex, degree: i.degreeOfInjury,
-        nature: i.natureOfInjury, occupation: i.occupation
+
+    // The whole investigation, not a selection from it. The summary is asked for
+    // every detail the investigation records, so every detail has to be sent:
+    // fall distance and height in particular are the measurements a fatality
+    // summary turns on, and they were previously left out.
+    investigation: inv ? {
+      event: some(inv.event),
+      eventTime: some(inv.eventTime),
+      narrative: (inv.narrative || '').slice(0, 1500) || undefined,
+      keywords: some(inv.keywords),
+      projectType: some(inv.projectType),
+      projectCost: some(inv.projectCost),
+      constructionEndUse: some(inv.constructionEndUse),
+      buildingStories: some(inv.buildingStories),
+      injured: (inv.injured || []).slice(0, 5).map(i => ({
+        age: some(i.age),
+        sex: some(i.sex),
+        degreeOfInjury: some(i.degreeOfInjury),
+        natureOfInjury: some(i.natureOfInjury),
+        occupation: some(i.occupation),
+        partOfBody: some(i.partOfBody),
+        sourceOfInjury: some(i.sourceOfInjury),
+        eventType: some(i.eventType),
+        humanFactor: some(i.humanFactor),
+        environmentalFactor: some(i.environmentalFactor),
+        taskAssigned: some(i.taskAssigned),
+        hazardousSubstance: some(i.hazardousSubstance),
+        fallDistanceFeet: some(i.fallDistance),
+        fallHeightFeet: some(i.fallHeight),
+        constructionOperation: some(i.constructionOperation),
+        constructionCause: some(i.constructionCause),
+        fatalityCause: some(i.fatalityCause)
       }))
     } : undefined
   };
