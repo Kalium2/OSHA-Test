@@ -1204,21 +1204,39 @@ function subPath(code) {
  */
 const pageCache = new Map();
 
+/**
+ * Returns { status, text }. text is null unless the page came back.
+ *
+ * Only a page that actually arrived is cached. Caching a failure — here or at
+ * the edge — turns one refused request into a week of identical blanks, which
+ * looks exactly like a bug in the lookup and is impossible to tell apart from
+ * one. cacheTtlByStatus keeps the long cache for successes only.
+ */
 async function fetchText(url) {
-  if (pageCache.has(url)) return pageCache.get(url);
-  let text = null;
+  if (pageCache.has(url)) return { status: 200, text: pageCache.get(url) };
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'violations-desk/1.0', 'Accept': 'text/html,application/xml' },
-      cf: { cacheTtl: 604800, cacheEverything: true }   // a published regulation does not change
+      headers: {
+        // Some government sites refuse an unfamiliar agent outright.
+        'User-Agent': 'Mozilla/5.0 (compatible; ViolationsDesk/1.0; +underwriting reference tool)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      redirect: 'follow',
+      cf: {
+        cacheEverything: true,
+        cacheTtlByStatus: { '200-299': 604800, '301-399': 3600, '400-499': 60, '500-599': 0 }
+      }
     });
-    if (res.ok) text = await res.text();
-  } catch {
-    text = null;   // network fault: the citation keeps its number and no text
+    if (!res.ok) return { status: res.status, text: null };
+
+    const text = await res.text();
+    if (pageCache.size > 200) pageCache.clear();
+    pageCache.set(url, text);
+    return { status: res.status, text };
+  } catch (err) {
+    return { status: 0, text: null, error: String(err).slice(0, 120) };
   }
-  if (pageCache.size > 200) pageCache.clear();
-  pageCache.set(url, text);
-  return text;
 }
 
 // ---------- California: Title 8 on dir.ca.gov ----------
@@ -1266,10 +1284,10 @@ async function californiaText(code) {
   const url = californiaUrl(code);
   if (!url) return null;
 
-  const markup = await fetchText(url);
-  if (!markup) return null;
+  const page = await fetchText(url);
+  if (!page.text) return null;
 
-  const { title, body } = sectionBody(toPlainText(markup));
+  const { title, body } = sectionBody(toPlainText(page.text));
   if (!body || body.length < 40) return null;
 
   const para = paragraphFor(body, subPath(code), 'ca') || body;
@@ -1319,10 +1337,10 @@ async function federalText(code) {
   const url = `https://www.ecfr.gov/api/versioner/v1/full/${date}/title-29.xml`
     + `?part=${parts.part}&section=${encodeURIComponent(parts.section)}`;
 
-  const markup = await fetchText(url);
-  if (!markup) return null;
+  const page = await fetchText(url);
+  if (!page.text) return null;
 
-  const { title, body } = sectionBody(toPlainText(markup));
+  const { title, body } = sectionBody(toPlainText(page.text));
   if (!body || body.length < 20) return null;
 
   const para = paragraphFor(body, parts.path, 'cfr') || body;
@@ -1410,13 +1428,22 @@ async function standardDiagnostic(request, env, q) {
   // Why a blank description is blank: the code could not be read, the page is
   // not there, or the page is there and the subsection could not be found in it.
   let reason;
+  let status;
   if (result) reason = undefined;
   else if (!code) reason = 'no standard given';
   else if (federal) reason = 'the eCFR returned nothing for this section';
   else if (!state) reason = 'the inspection carries no state, so a state plan code cannot be looked up';
   else if (state !== 'CA') reason = `${STATE_PLAN_TITLES[state] || state + ' state plan'} is not retrieved; only California is fetched today`;
   else if (!page) reason = 'no section number could be read out of the code';
-  else reason = (await fetchText(page)) ? 'the page was found but held no usable text' : 'no page at that address';
+  else {
+    const got = await fetchText(page);
+    status = got.status;
+    reason = got.text
+      ? 'the page was found but held no usable text'
+      : got.status === 0
+        ? 'the page could not be reached: ' + (got.error || 'network error')
+        : `Cal/OSHA returned ${got.status} for that address`;
+  }
 
   return json({
     code,
@@ -1427,6 +1454,7 @@ async function standardDiagnostic(request, env, q) {
     page,
     subsection: subPath(code),
     found: Boolean(result),
+    status,
     reason,
     text: result?.text,
     textSource: result?.source
