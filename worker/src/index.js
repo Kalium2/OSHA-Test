@@ -1059,15 +1059,13 @@ function normaliseStandard(raw) {
 
 const STANDARD_SYSTEM = [
   'You explain OSHA standards to a commercial insurance underwriter.',
-  'For each standard given, summarise the duty it imposes: who must do what, and in what circumstances.',
+  'For each standard given, provide a concise and direct summary of what the standard requires.',
   'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
   'Do not restate the standard number.',
   'Each line gives OSHAs stored code, then the citation it refers to. Answer for that citation.',
   'Many are state plan standards rather than federal 29 CFR: the line names the regulation, for example the California Code of Regulations, Title 8. Answer those the same way.',
-  'Summarise the duty, not the procedure for discharging it. Do not name reporting channels, forms, systems, offices, deadlines, thresholds, dimensions or figures. Where a standard prescribes such particulars, say that it prescribes them: "by the means the regulation prescribes", "within the period it specifies".',
-  'Those particulars are revised far more often than the duty itself, and a stale one reads as fact. Wording that stays true as procedures change is worth more here than detail.',
-  'Give a summary for every standard listed. Where you are not certain of the exact wording, state the subject the section governs, phrased as a duty.',
-  'Return an empty string only when you cannot identify the subject of the section at all. Never fabricate.',
+  'Give a summary for every standard listed. Where you are not certain of the exact wording, state the subject the section governs instead, phrased as a requirement.',
+  'Return an empty string only when you cannot identify the subject of the section at all. Do not fabricate specific numbers, limits or dates.',
   'Key each result by the stored code exactly as given, not by the citation.',
   'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
 ].join(' ');
