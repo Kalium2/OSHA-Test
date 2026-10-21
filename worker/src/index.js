@@ -909,17 +909,16 @@ const SUMMARY_SYSTEM = [
   'Write plainly, in full sentences. Refer to the employer as "the insured". Do not repeat the establishment name, the dates or the activity number.',
   'Return JSON only: {"summaries":[{"activityNr":"...","summary":"..."}],"overall":"..."}',
 
-  '"overall" is the overarching summary of all the inspections together, in 100 words or less.',
-  'Open it with how many inspections there were across the five year period.',
-  'Then cover any fatalities, including what caused each death and when it happened.',
-  'Then the Willful, Repeat and Serious citations: the standard cited, what that standard requires, the hazard involved, and what triggered the inspection.',
-  'Where inspections share a standard or a hazard, say so once rather than repeating it for each.',
-  'Close with whether the cited hazards were abated.',
-
+  '"overall" is the overarching summary of all the inspections together, in 250 words or less.',
+  'Open with the number of inspections in five years. Then comment on any fatalities, including a maximum 15 word summary of what caused each death and when it happened. Do not comment on Fatalities if no fatality has been recorded.',
+  'Then comment on  Willful, Repeat and Serious citations: the standard cited, and the hazard involved. Note if a citation was initially Serious, Willful, or Repeat and now has a different Current Penalty',
+  'Close with whether the cited hazards have been abated and note any citation that has not been abated.',
+  'If there are no Serious citations then state that there are none. Do not state if there are no Willful or Repeat citations.',
   'Each entry in "summaries" is one inspection, under 100 words.',
   'Cover the Willful, Repeat, Serious and Other citations present, why each was issued, the standard cited and what it requires, the hazard involved, the reason the inspection took place, and whether and when each hazard was abated.',
-  'Where an inspection involves a fatality, that entry may run to 250 words and must also give the cause of death, when it occurred, every detail the investigation summary provides, and the employee headcount where it is recorded.',
-  'Where an inspection produced no citations, say so in one sentence and stop.'
+  'Where an inspection involves a fatality, that entry may run to 250 words and must also give the cause of death, when it occurred, every detail the investigation summary provides,',
+  'Each entry in summaries will conclude with if abatement has occured, when the abatement occcured, and the employee headcount where it is recorded. If abatement has not been completed then note that it has not been abated',
+  'Where an inspection produced no citations, then do not create an entry and provide no comments.',
 ].join(' ');
 
 // Only the fields that bear on the summary, so the prompt stays small.
