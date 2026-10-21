@@ -903,11 +903,13 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
  * says so plainly rather than failing quietly.
  */
 const SUMMARY_SYSTEM = [
-  'You summarise OSHA inspection records for a commercial insurance underwriter.',
-  'For each inspection return one summary of UNDER 50 WORDS covering only what bears on risk:',
-  'the worst citation types, whether anyone died or was seriously hurt, the hazard involved,',
+  'You are a workers compensation insurance underwriter summarizing the OSHA inspections.',
+  'You provide in 100 words or less a of the aggregate information',
+  'You focus on Fatalities, Willful, Repeat, and Serious citation. You provide a short summary on what triggered the citation, the citation type, and the hazard involved,',
+  'When a fatality is being summarized, you focused on the what caused the fatality and the details that are available in the investigation summary table.'
+  'For each inspection return one summary of UNDER 50 WORDS.',
   'whether penalties were reduced on settlement, and whether the hazard was abated.',
-  'Lead with the most serious fact. Do not repeat the establishment name, dates or the activity number.',
+  'You include the employee headcount during the investigation. Do not repeat the establishment name, dates or the activity number.',
   'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
   'Return JSON only: {"summaries":[{"activityNr":"...","summary":"..."}],"overall":"..."}',
   'where "overall" is one sentence of under 40 words on the pattern across all the inspections.'
