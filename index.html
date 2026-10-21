@@ -1267,6 +1267,26 @@
     autosize(def);
   }
 
+  // The retrieved wording is shown on screen, but the AI summary is built from
+  // the record rather than the screen. Without this, the model is handed a bare
+  // standard number and can only name it, never say what it requires.
+  // Matched on citation ID, since the citation blocks can be re-sorted.
+  function recordStandardText() {
+    recordsBody.querySelectorAll('tr.insp-row').forEach(row => {
+      const rec = row._record;
+      const detail = row.nextElementSibling;
+      if (!rec || !detail) return;
+      detail.querySelectorAll('.citation-block').forEach(block => {
+        const id = String(block.querySelector('[data-field="citationId"]')?.value || '').trim();
+        const text = String(block.querySelector('.f-stdDefinition')?.value || '').trim();
+        if (!id || !text) return;
+        const item = (rec.violationItems || [])
+          .find(v => String(v.citationId ?? '').trim() === id);
+        if (item && !String(item.standardDetails || '').trim()) item.standardDetails = text;
+      });
+    });
+  }
+
   async function fillMissingStandards() {
     const blocks = citationsMissingText();
     if (!blocks.length) return;
@@ -1299,6 +1319,7 @@
         const std = block.querySelector('[data-field="standardCited"]').value.trim();
         if (standardCache.has(std)) applyStandardText(block, standardCache.get(std));
       });
+      recordStandardText();
     } catch (err) {
       /* the standard number still shows; the description simply stays empty */
     }
