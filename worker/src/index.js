@@ -904,7 +904,7 @@ export function mapRecord({ insp, violations, events, injuries, accident, abstra
 const SUMMARY_SYSTEM = [
   'You summarise OSHA inspection records for a commercial insurance underwriter.',
   'For each inspection return one summary of UNDER 50 WORDS covering only what bears on risk:',
-  'the worst citation types, whether anyone died or was seriously hurt, the hazard involved,',
+  'the worst citation types from a workers compensation perspective, whether anyone died or was seriously hurt, the hazard involved,',
   'whether penalties were reduced on settlement, and whether the hazard was abated.',
   'Lead with the most serious fact. Do not repeat the establishment name, dates or the activity number.',
   'Do not speculate beyond the record. Where a field is absent, say nothing about it.',
@@ -1058,14 +1058,14 @@ function normaliseStandard(raw) {
 }
 
 const STANDARD_SYSTEM = [
-  'You explain OSHA standards to a commercial insurance underwriter.',
-  'For each standard given, provide a concise and direct summary of what the standard requires.',
-  'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
+  'You define OSHA standards to a commercial insurance underwriter.',
+  'For each standard given, provide directly what the standard requires.',
+  'Under 50 words each. State the requirement itself, not the consequences of breaching it.',
   'Do not restate the standard number.',
   'Each line gives OSHAs stored code, then the citation it refers to. Answer for that citation.',
   'Many are state plan standards rather than federal 29 CFR: the line names the regulation, for example the California Code of Regulations, Title 8. Answer those the same way.',
-  'Give a summary for every standard listed. Where you are not certain of the exact wording, state the subject the section governs instead, phrased as a requirement.',
-  'Return an empty string only when you cannot identify the subject of the section at all. Do not fabricate specific numbers, limits or dates.',
+  'Give a summary for every standard listed. Where you are not certain of the exact wording, state that you are unable to provide the standard.',
+  'Do not fabricate specific numbers, limits or dates.',
   'Key each result by the stored code exactly as given, not by the citation.',
   'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
 ].join(' ');
