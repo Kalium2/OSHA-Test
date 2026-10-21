@@ -1002,6 +1002,31 @@ async function summarise(request, env) {
  */
 // State plans publish their own codes. Naming the regulation makes a bare
 // section number identifiable; without it, "3314(G)" could be anyone's.
+const STATE_PLAN_SOURCES = {
+  AK: 'https://labor.alaska.gov/lss/',
+  AZ: 'https://apps.azsos.gov/public_services/CodeTOC.htm',
+  CA: 'https://www.dir.ca.gov/Samples/search/query.htm',
+  HI: 'https://labor.hawaii.gov/hiosh/standards/',
+  IA: 'https://www.legis.iowa.gov/DOCS/ACO/IC/LINC/Section.73a.21.PDF',
+  KY: 'https://elc.ky.gov/Pages/index.aspx',
+  ME: 'https://www.maine.gov/labor/workplace_safety/publicsector.shtml',
+  MD: 'https://www.dllr.state.md.us/labor/mosh/',
+  MI: 'https://www.michigan.gov/en/leo/bureaus-agencies/MIOSHA/Standards',
+  MN: 'https://www.dli.mn.gov/business/workplace-safety-and-health/mnosha-compliance-standards-and-regulations',
+  NV: 'https://www.leg.state.nv.us/nac/nac-618.html',
+  NJ: 'https://www.nj.gov/health/workplacehealthandsafety/peosh/peosh-health-standards/',
+  NM: 'https://www.env.nm.gov/occupational_health_safety/state-plan-index/',
+  NY: 'https://www.osha.gov/stateplans/statestandards',
+  NC: 'https://www.labor.nc.gov/rules-and-regulations',
+  OR: 'https://osha.oregon.gov/Pages/index.aspx',
+  SC: 'https://osha.llr.sc.gov/standards/list.aspx',
+  TN: 'https://www.tn.gov/workforce/employees/safety-health/tosha-redirect/compliance/tosha-standards-and-rules.html',
+  UT: 'https://adminrules.utah.gov/',
+  VT: 'https://labor.vermont.gov/vermont-occupational-safety-and-health-administration-vosha/rules-publications/rules-regulations',
+  VA: 'https://doli.virginia.gov/resources/regulatory-information/',
+  WA: 'https://lni.wa.gov/safety-health/safety-rules/rules-by-chapter/'
+};
+
 const STATE_PLAN_TITLES = {
   CA: 'California Code of Regulations, Title 8',
   MI: 'Michigan Occupational Safety and Health Standards',
@@ -1059,12 +1084,11 @@ function normaliseStandard(raw) {
 
 const STANDARD_SYSTEM = [
   'You explain OSHA standards to a commercial insurance underwriter.',
-  'For each standard given, provide a concise and direct summary of what the standard requires.',
-  'Under 40 words each. State the requirement itself, not the consequences of breaching it.',
+  'For each standard given, provide the exact and direct summary of what the standard requires.',
+  'State the requirement itself, not the consequences of breaching it.',
   'Do not restate the standard number.',
   'Each line gives OSHAs stored code, then the citation it refers to. Answer for that citation.',
-  'Many are state plan standards rather than federal 29 CFR: the line names the regulation, for example the California Code of Regulations, Title 8. Answer those the same way.',
-  'Give a summary for every standard listed. Where you are not certain of the exact wording, state the subject the section governs instead, phrased as a requirement.',
+  'Where you are not certain of the exact wording, state the subject the section governs instead, phrased as a requirement.',
   'Return an empty string only when you cannot identify the subject of the section at all. Do not fabricate specific numbers, limits or dates.',
   'Key each result by the stored code exactly as given, not by the citation.',
   'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
