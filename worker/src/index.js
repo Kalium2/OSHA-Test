@@ -914,7 +914,7 @@ const SUMMARY_SYSTEM = [
   'Then comment on  Willful, Repeat and Serious citations: the standard cited, and the hazard involved. Note if a citation was initially Serious, Willful, or Repeat and now has a different Current Penalty',
   'Close with whether the cited hazards have been abated and note any citation that has not been abated.',
   'If there are no Serious citations then state that there are none. Do not state if there are no Willful or Repeat citations.',
-  'Each entry in "summaries" is one inspection, under 100 words.',
+  'Each entry in "summaries" is one inspection, with the inspection number bolded, and presented in under 100 words.',
   'Cover the Willful, Repeat, Serious and Other citations present, why each was issued, the standard cited and what it requires, the hazard involved, the reason the inspection took place, and whether and when each hazard was abated.',
   'Where an inspection involves a fatality, that entry may run to 250 words and must also give the cause of death, when it occurred, every detail the investigation summary provides,',
   'Each entry in summaries will conclude with if abatement has occured, when the abatement occcured, and the employee headcount where it is recorded. If abatement has not been completed then note that it has not been abated',
