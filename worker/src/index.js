@@ -1059,12 +1059,12 @@ function normaliseStandard(raw) {
 
 const STANDARD_SYSTEM = [
   'You define OSHA standards to a commercial insurance underwriter.',
-  'For each standard given, provide directly what the standard requires.',
+  'For each standard given, provide what the standard governs.',
   'Under 50 words each. State the requirement itself, not the consequences of breaching it.',
   'Do not restate the standard number.',
   'Each line gives OSHAs stored code, then the citation it refers to. Answer for that citation.',
   'Many are state plan standards rather than federal 29 CFR: the line names the regulation, for example the California Code of Regulations, Title 8. Answer those the same way.',
-  'Give a summary for every standard listed. Where you are not certain of the exact wording, state that you are unable to provide the standard.',
+  'Where you do not have more than 60% confidence in the standard wording, state that you are unable to provide the standard.',
   'Do not fabricate specific numbers, limits or dates.',
   'Key each result by the stored code exactly as given, not by the citation.',
   'Return JSON only: {"definitions":{"<stored code as given>":"<summary>"}}'
