@@ -1138,7 +1138,7 @@ async function describeStandards(request, env) {
       system: STANDARD_SYSTEM,
       messages: [{
         role: 'user',
-        content: 'Provide a concise and direct summary of each of these OSHA standards.\n'
+        content: 'Provide the exact text for each OSHA standard.\n'
           + 'Each line is: <stored code>  =  <published citation>\n\n'
           + standards.map(asLine).join('\n')
       }]
