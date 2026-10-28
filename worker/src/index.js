@@ -1588,7 +1588,7 @@ export default {
       if (url.pathname === '/search') {
         const rows = await searchInspections(env, {
           name: q.get('name'), state: q.get('state'), since: q.get('since'),
-          limit: Number(q.get('limit')) || 25
+          limit: Number(q.get('limit')) || 100
         });
         return json(rows.map(r => ({
           activityNr: String(r.activity_nr),
