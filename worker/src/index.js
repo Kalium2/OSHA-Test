@@ -357,7 +357,7 @@ function defaultSince() {
   return `${new Date().getFullYear() - 4}-01-01`;
 }
 
-async function searchInspections(env, { name, state, since, limit = 25 }) {
+async function searchInspections(env, { name, state, since, limit = 100 }) {
   const conds = [];
   if (name) {
     // DOL's `like` needs explicit wildcards; add them when the caller hasn't.
@@ -1608,7 +1608,7 @@ export default {
         }
 
         // by name: look up matches, then load them all in one batch
-        const limit = Math.min(Number(q.get('limit')) || 10, 25);
+        const limit = Math.min(Number(q.get('limit')) || 10, 100);
         const matches = await searchInspections(env, {
           name: q.get('name'), state: q.get('state'), since: q.get('since'), limit
         });
