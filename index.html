@@ -1622,7 +1622,7 @@
     const name = estabName.value.trim();
     if (!name) { setStatus('Enter an establishment name to search.', true); estabName.focus(); return; }
 
-    const params = new URLSearchParams({ name, limit: '25' });
+    const params = new URLSearchParams({ name, limit: '100' });
 
     setStatus('Searching…');
     try {
